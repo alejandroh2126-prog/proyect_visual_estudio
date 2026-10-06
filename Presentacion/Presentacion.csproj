@@ -1,14 +1,1 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
-
-  <ItemGroup>
-    <ProjectReference Include="..\Logica\Logica.csproj" />
-    <ProjectReference Include="..\Entidades\Entidades.csproj" />
-  </ItemGroup>
-
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
-
-</Project>
+﻿Console.WriteLine("Hello, World!");
