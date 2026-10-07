@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -36,6 +37,8 @@ namespace Presentacion.Comun
             Controls.Add(etiqueta);
         }
 
+        [Browsable(false)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public string Valor
         {
             get { return _valor.Text; }
