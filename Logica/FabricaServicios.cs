@@ -20,6 +20,7 @@ namespace Logica
         public ServicioFacturas Facturas { get; }
         public ServicioReportes Reportes { get; }
         public ServicioAsistente Asistente { get; }
+        public ServicioAsistenteIA AsistenteIA { get; }
 
         public FabricaServicios()
         {
@@ -42,6 +43,7 @@ namespace Logica
             Facturas = new ServicioFacturas();
             Reportes = new ServicioReportes(Ventas, Inventario, Finanzas);
             Asistente = new ServicioAsistente();
+            AsistenteIA = new ServicioAsistenteIA(Asistente);
         }
     }
 }
