@@ -59,13 +59,43 @@ namespace Presentacion.Vistas
             _entrada.Focus();
         }
 
-        private void Enviar()
+        private async void Enviar()
         {
             string pregunta = _entrada.Text.Trim();
             if (pregunta.Length == 0) return;
+
             _entrada.Clear();
+            _entrada.Enabled = false;
             _chat.AppendText("Tú: " + pregunta + Environment.NewLine);
-            _chat.AppendText("Asistente: " + Fabrica.Asistente.Responder(pregunta) + Environment.NewLine + Environment.NewLine);
+            _chat.AppendText("Asistente: ");
+
+            try
+            {
+                bool llegoTexto = false;
+                string respuesta = await Fabrica.AsistenteIA.ResponderAsync(pregunta, trozo =>
+                {
+                    llegoTexto = true;
+                    _chat.AppendText(trozo);
+                });
+
+                // Si Ollama no estaba disponible no hubo trozos: se muestra la respuesta del asistente basico.
+                if (!llegoTexto)
+                {
+                    if (Fabrica.AsistenteIA.UltimaRespuestaFueDeRespaldo)
+                        _chat.AppendText("(modo básico: la IA local no está disponible) ");
+                    _chat.AppendText(respuesta);
+                }
+            }
+            catch (Exception ex)
+            {
+                _chat.AppendText("No pude responder: " + ex.Message);
+            }
+            finally
+            {
+                _chat.AppendText(Environment.NewLine + Environment.NewLine);
+                _entrada.Enabled = true;
+                _entrada.Focus();
+            }
         }
     }
 }
