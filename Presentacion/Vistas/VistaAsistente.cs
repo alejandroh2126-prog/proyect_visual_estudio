@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using Logica;
+using Logica.Servicios;
 using Presentacion.Comun;
 
 namespace Presentacion.Vistas
@@ -72,19 +73,19 @@ namespace Presentacion.Vistas
             try
             {
                 bool llegoTexto = false;
-                string respuesta = await Fabrica.AsistenteIA.ResponderAsync(pregunta, trozo =>
+                string respuesta = await Fabrica.AsistenteNube.ResponderAsync(pregunta, trozo =>
                 {
                     llegoTexto = true;
                     _chat.AppendText(trozo);
                 });
 
-                // Si Ollama no estaba disponible no hubo trozos: se muestra la respuesta del asistente basico.
-                if (!llegoTexto)
-                {
-                    if (Fabrica.AsistenteIA.UltimaRespuestaFueDeRespaldo)
-                        _chat.AppendText("(modo básico: la IA local no está disponible) ");
-                    _chat.AppendText(respuesta);
-                }
+                // El modo basico no entrega trozos: se muestra la respuesta completa.
+                if (!llegoTexto) _chat.AppendText(respuesta);
+
+                if (Fabrica.AsistenteNube.UltimaFuente == FuenteAsistente.Local)
+                    _chat.AppendText(Environment.NewLine + "(sin conexión a la nube: respondió la IA local)");
+                else if (Fabrica.AsistenteNube.UltimaFuente == FuenteAsistente.Basico)
+                    _chat.AppendText(Environment.NewLine + "(modo básico: sin conexión a la nube ni a la IA local)");
             }
             catch (Exception ex)
             {
