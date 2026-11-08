@@ -21,6 +21,7 @@ namespace Logica
         public ServicioReportes Reportes { get; }
         public ServicioAsistente Asistente { get; }
         public ServicioAsistenteIA AsistenteIA { get; }
+        public ServicioAsistenteN8n AsistenteNube { get; }
 
         public FabricaServicios()
         {
@@ -44,6 +45,7 @@ namespace Logica
             Reportes = new ServicioReportes(Ventas, Inventario, Finanzas);
             Asistente = new ServicioAsistente();
             AsistenteIA = new ServicioAsistenteIA(Asistente);
+            AsistenteNube = new ServicioAsistenteN8n(AsistenteIA);
         }
     }
 }
