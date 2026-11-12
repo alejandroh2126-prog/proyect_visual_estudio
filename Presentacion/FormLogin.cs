@@ -11,6 +11,8 @@ namespace Presentacion
     {
         private readonly FabricaServicios _fabrica;
         private bool _modoRegistro;
+        private readonly Label _etiquetaRol = new Label { Text = "Tipo de cuenta", ForeColor = Color.White, AutoSize = true };
+        private readonly ComboBox _rol = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 330 };
 
         private readonly Label _titulo = new Label();
         private readonly Label _subtitulo = new Label();
@@ -28,7 +30,7 @@ namespace Presentacion
             Text = "SGAPE - Iniciar sesión";
             Font = Tema.Normal;
             BackColor = Tema.VerdeOscuro;
-            ClientSize = new Size(440, 520);
+            ClientSize = new Size(460, 610);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
@@ -89,6 +91,8 @@ namespace Presentacion
             panel.Controls.Add(_subtitulo);
             panel.Controls.Add(_etiquetaNombre);
             panel.Controls.Add(_nombre);
+            _rol.Items.AddRange(new object[] { "Emprendedor", "Trabajador" }); _rol.SelectedIndex = 0;
+            panel.Controls.Add(_etiquetaRol); panel.Controls.Add(_rol);
             panel.Controls.Add(etiquetaCorreo);
             panel.Controls.Add(_correo);
             panel.Controls.Add(etiquetaClave);
@@ -111,6 +115,7 @@ namespace Presentacion
         {
             _etiquetaNombre.Visible = _modoRegistro;
             _nombre.Visible = _modoRegistro;
+            _rol.Visible = _etiquetaRol.Visible = _modoRegistro;
             _principal.Text = _modoRegistro ? "Crear cuenta" : "Iniciar sesión";
             _cambiar.Text = _modoRegistro ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate";
             Text = _modoRegistro ? "SGAPE - Crear cuenta" : "SGAPE - Iniciar sesión";
@@ -120,7 +125,7 @@ namespace Presentacion
         {
             bool bien = Mensajes.Ejecutar(delegate
             {
-                if (_modoRegistro) _fabrica.Autenticacion.Registrar(_nombre.Text, _correo.Text, _clave.Text);
+                if (_modoRegistro) _fabrica.Autenticacion.Registrar(_nombre.Text, _correo.Text, _clave.Text, _rol.SelectedIndex == 1 ? Entidades.RolUsuario.Trabajador : Entidades.RolUsuario.Emprendedor);
                 else _fabrica.Autenticacion.IniciarSesion(_correo.Text, _clave.Text);
             });
             if (bien) DialogResult = DialogResult.OK;

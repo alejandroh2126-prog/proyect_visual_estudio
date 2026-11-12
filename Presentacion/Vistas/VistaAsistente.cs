@@ -76,9 +76,10 @@ namespace Presentacion.Vistas
                 string respuesta = await Fabrica.AsistenteNube.ResponderAsync(pregunta, trozo =>
                 {
                     llegoTexto = true;
-                    _chat.AppendText(trozo);
+                    if (!IsDisposed && !_chat.IsDisposed) _chat.AppendText(trozo);
                 });
 
+                if (IsDisposed || _chat.IsDisposed) return;
                 // El modo basico no entrega trozos: se muestra la respuesta completa.
                 if (!llegoTexto) _chat.AppendText(respuesta);
 
@@ -89,13 +90,16 @@ namespace Presentacion.Vistas
             }
             catch (Exception ex)
             {
-                _chat.AppendText("No pude responder: " + ex.Message);
+                if (!IsDisposed && !_chat.IsDisposed) _chat.AppendText("No pude responder: " + ex.Message);
             }
             finally
             {
-                _chat.AppendText(Environment.NewLine + Environment.NewLine);
-                _entrada.Enabled = true;
-                _entrada.Focus();
+                if (!IsDisposed && !_chat.IsDisposed && !_entrada.IsDisposed)
+                {
+                    _chat.AppendText(Environment.NewLine + Environment.NewLine);
+                    _entrada.Enabled = true;
+                    _entrada.Focus();
+                }
             }
         }
     }

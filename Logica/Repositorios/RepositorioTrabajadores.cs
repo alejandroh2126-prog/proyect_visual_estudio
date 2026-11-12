@@ -26,7 +26,7 @@ namespace Logica.Repositorios
 		protected override string Serializar(Trabajador t)
 		{
 			return CsvUtil.Unir(CsvUtil.DeEntero(t.Id), CsvUtil.DeEntero(t.EmprendimientoId), t.Nombre,
-				t.Apellido, t.Cedula, CsvUtil.DeEntero(t.Cargo.Id), CsvUtil.DeFecha(t.FechaIngreso), t.Estado);
+				t.Apellido, t.Cedula, CsvUtil.DeEntero(t.Cargo.Id), CsvUtil.DeFecha(t.FechaIngreso), t.Estado, t.TipoDocumento, t.ClaveFicha);
 		}
 
 		protected override Trabajador? Deserializar(string[] c)
@@ -37,6 +37,8 @@ namespace Logica.Repositorios
 			Trabajador t = new Trabajador(CsvUtil.AEntero(c[0]), c[2], c[3], c[4], _cargos[cargoId],
 				CsvUtil.AFecha(c[6]), CsvUtil.AEntero(c[1]));
 			t.Estado = c[7];
+			if (c.Length > 8) t.TipoDocumento = c[8];
+			if (c.Length > 9) t.ClaveFicha = c[9];
 			return t;
 		}
 

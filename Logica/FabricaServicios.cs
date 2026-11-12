@@ -10,6 +10,10 @@ namespace Logica
     /// </summary>
     public class FabricaServicios
     {
+        public ServicioHistorialLaboral HistorialLaboral { get; }
+        public ServicioEmpleos Empleos { get; }
+        public ServicioFichaTrabajador FichasTrabajador { get; }
+        public ServicioPerfilCuenta PerfilCuenta { get; }
         public ServicioAutenticacion Autenticacion { get; }
         public ServicioEmprendimientos Emprendimientos { get; }
         public ServicioNomina Nomina { get; }
@@ -34,11 +38,15 @@ namespace Logica
             RepositorioMovimientos movimientos = new RepositorioMovimientos();
             RepositorioPresupuestos presupuestos = new RepositorioPresupuestos();
 
+            PerfilCuenta = new ServicioPerfilCuenta(new RepositorioPerfilesCuenta());
             Autenticacion = new ServicioAutenticacion(usuarios);
             Finanzas = new ServicioFinanzas(movimientos);
             Presupuestos = new ServicioPresupuestos(presupuestos, Finanzas);
-            Emprendimientos = new ServicioEmprendimientos(emprendimientos, cargos, trabajadores, productos, ventas, movimientos, presupuestos);
-            Nomina = new ServicioNomina(cargos, trabajadores);
+            FichasTrabajador = new ServicioFichaTrabajador(new RepositorioFichasTrabajador(), trabajadores, emprendimientos);
+            Empleos = new ServicioEmpleos(new RepositorioPerfilesCandidato(), new RepositorioVacantes(), new RepositorioPostulaciones(), usuarios, emprendimientos);
+            HistorialLaboral = new ServicioHistorialLaboral(new RepositorioExperienciasLaborales(), Empleos);
+            Emprendimientos = new ServicioEmprendimientos(emprendimientos, cargos, trabajadores, productos, ventas, movimientos, presupuestos, FichasTrabajador, Empleos);
+            Nomina = new ServicioNomina(cargos, trabajadores, emprendimientos, FichasTrabajador);
             Inventario = new ServicioInventario(productos, Finanzas);
             Ventas = new ServicioVentas(ventas, productos, Finanzas);
             Facturas = new ServicioFacturas();

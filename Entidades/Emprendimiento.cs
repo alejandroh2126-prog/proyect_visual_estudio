@@ -7,6 +7,7 @@ namespace Entidades
     {
         public int Id { get; set; }
         public int UsuarioId { get; set; }
+        public string ClaveLaboral { get; set; } = "";
         public string Nombre { get; set; } = string.Empty;
         public string Descripcion { get; set; } = string.Empty;
         public string Sector { get; set; } = string.Empty;

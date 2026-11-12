@@ -87,6 +87,7 @@ namespace Presentacion
             opciones.Dock = DockStyle.Fill;
             opciones.FlowDirection = FlowDirection.TopDown;
             opciones.WrapContents = false;
+            opciones.AutoScroll = true;
             opciones.Margin = new Padding(0);
 
             Agregar(opciones, "Resumen", new VistaInicio(_fabrica));
@@ -98,6 +99,8 @@ namespace Presentacion
             Agregar(opciones, "Presupuestos", new VistaPresupuestos(_fabrica));
             Agregar(opciones, "Reportes", new VistaReportes(_fabrica));
             Agregar(opciones, "Asistente", new VistaAsistente(_fabrica));
+            Agregar(opciones, "Mi perfil", new VistaPerfilCuenta(_fabrica));
+            Agregar(opciones, "Empleo", new VistaEmpleoEmprendedor(_fabrica));
 
             Button salir = CrearBotonMenu("Cerrar sesión");
             salir.Dock = DockStyle.Fill;
@@ -142,11 +145,12 @@ namespace Presentacion
             barra.BackColor = Color.White;
             barra.Margin = new Padding(0);
             barra.Padding = new Padding(20, 0, 20, 0);
-            barra.ColumnCount = 3;
+            barra.ColumnCount = 4;
             barra.RowCount = 1;
             barra.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             barra.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             barra.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            barra.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 50F));
             barra.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
             Label etiqueta = Tema.Etiqueta("Emprendimiento:");
@@ -170,6 +174,10 @@ namespace Presentacion
             barra.Controls.Add(etiqueta, 0, 0);
             barra.Controls.Add(_selector, 1, 0);
             barra.Controls.Add(usuario, 2, 0);
+            PictureBox avatar = new PictureBox { Size = new Size(38, 38), SizeMode = PictureBoxSizeMode.Zoom, Anchor = AnchorStyles.Right, BackColor = Tema.VerdeClaro };
+            Mensajes.Ejecutar(() => { if (_fabrica.PerfilCuenta.Obtener().Foto != "") ArchivosVista.MostrarFoto(avatar, _fabrica.PerfilCuenta.RutaFoto()); });
+            avatar.Disposed += (_, _) => avatar.Image?.Dispose();
+            barra.Controls.Add(avatar, 3, 0);
             return barra;
         }
 
@@ -209,6 +217,12 @@ namespace Presentacion
             _contenido.Controls.Clear();
             _contenido.Controls.Add(_vistaActual);
             _vistaActual.Mostrar(EmprendimientoSeleccionado);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) foreach (VistaBase vista in _vistas.Values) if (!vista.IsDisposed) vista.Dispose();
+            base.Dispose(disposing);
         }
 
         private void CerrarSesion()

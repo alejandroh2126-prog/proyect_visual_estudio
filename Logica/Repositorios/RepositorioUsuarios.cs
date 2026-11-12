@@ -9,7 +9,7 @@ namespace Logica.Repositorios
 
         protected override string Serializar(Usuario u)
         {
-            return CsvUtil.Unir(CsvUtil.DeEntero(u.Id), u.Nombre, u.Email, u.ClaveHash, CsvUtil.DeFecha(u.FechaRegistro));
+            return CsvUtil.Unir(CsvUtil.DeEntero(u.Id), u.Nombre, u.Email, u.ClaveHash, CsvUtil.DeFecha(u.FechaRegistro), u.Rol.ToString());
         }
 
         protected override Usuario? Deserializar(string[] c)
@@ -20,7 +20,8 @@ namespace Logica.Repositorios
                 Nombre = c[1],
                 Email = c[2],
                 ClaveHash = c[3],
-                FechaRegistro = CsvUtil.AFecha(c[4])
+                FechaRegistro = CsvUtil.AFecha(c[4]),
+                Rol = c.Length > 5 ? System.Enum.Parse<RolUsuario>(c[5]) : RolUsuario.Emprendedor
             };
         }
 

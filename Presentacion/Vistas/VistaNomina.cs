@@ -18,7 +18,7 @@ namespace Presentacion.Vistas
         private readonly TarjetaKpi _kDeducciones = new TarjetaKpi("Deducciones (8%)", Tema.Rojo);
         private readonly TarjetaKpi _kNeta = new TarjetaKpi("Nómina neta", Tema.Verde);
         private readonly DataGridView _tablaCargos = Tema.Tabla("Cargo", "Salario base", "Quincenal", "Deducciones", "Neto", "Descripción");
-        private readonly DataGridView _tablaTrabajadores = Tema.Tabla("Trabajador", "Cédula", "Cargo", "Ingreso", "Salario mensual", "Neto", "Estado");
+        private readonly DataGridView _tablaTrabajadores = Tema.Tabla("Trabajador", "Documento", "Cargo", "Ingreso", "Salario mensual", "Neto", "Estado");
 
         public VistaNomina(FabricaServicios fabrica) : base(fabrica)
         {
@@ -46,13 +46,15 @@ namespace Presentacion.Vistas
             Button nuevoTrab = Tema.Boton("Nuevo trabajador", Tema.Verde);
             Button editarTrab = Tema.Boton("Editar", Tema.Gris);
             Button eliminarTrab = Tema.Boton("Eliminar", Tema.Rojo);
+            Button ficha = Tema.Boton("Ficha y documentos", Tema.VerdeOscuro);
+            ficha.Click += delegate { AbrirFicha(); };
             nuevoTrab.Click += delegate { NuevoTrabajador(); };
             editarTrab.Click += delegate { EditarTrabajador(); };
             eliminarTrab.Click += delegate { EliminarTrabajador(); };
             _tablaTrabajadores.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) EditarTrabajador(); };
 
             TableLayoutPanel panelTrab = Tema.ColumnaVertical();
-            panelTrab.Fila(Tema.Barra(nuevoTrab, editarTrab, eliminarTrab), false);
+            panelTrab.Fila(Tema.Barra(nuevoTrab, editarTrab, eliminarTrab, ficha), false);
             panelTrab.Fila(_tablaTrabajadores, true);
             TabPage paginaTrab = new TabPage("2. Trabajadores");
             paginaTrab.Padding = new Padding(12);
@@ -96,7 +98,7 @@ namespace Presentacion.Vistas
 
                 foreach (Trabajador t in Fabrica.Nomina.ListarTrabajadores(id))
                 {
-                    DataGridViewRow fila = _tablaTrabajadores.AgregarFila(t, t.NombreCompleto, t.Cedula, t.Cargo.Nombre,
+                    DataGridViewRow fila = _tablaTrabajadores.AgregarFila(t, t.NombreCompleto, t.TipoDocumento + " " + t.Cedula, t.Cargo.Nombre,
                         Formato.Fecha(t.FechaIngreso), Formato.Moneda(t.SalarioMensual), Formato.Moneda(t.SalarioNeto), t.Estado);
                     if (!t.EstaActivo) fila.DefaultCellStyle.ForeColor = Tema.TextoSuave;
                 }
@@ -166,6 +168,14 @@ namespace Presentacion.Vistas
             {
                 if (d.ShowDialog(this) == DialogResult.OK) Recargar();
             }
+        }
+
+        private void AbrirFicha()
+        {
+            if (!ExigirEmprendimiento()) return;
+            Trabajador? t = _tablaTrabajadores.Seleccionado<Trabajador>();
+            if (t == null) { Mensajes.Info("Selecciona un trabajador."); return; }
+            Mensajes.Ejecutar(() => { using DialogoFichaTrabajador d = new DialogoFichaTrabajador(Fabrica, t); d.ShowDialog(this); });
         }
 
         private void EliminarTrabajador()

@@ -61,6 +61,15 @@ Desinstalar la aplicación **no** borra tus datos.
 2. Abrir `Instalador\SGAPE.iss` con [Inno Setup](https://jrsoftware.org/isinfo.php) y pulsar **Compile**.
 3. El instalador queda en `Instalador\Salida\`.
 
+## Perfiles y empleo (prototipo local)
+
+- **Mi perfil:** foto y colores por cuenta; los colores se aplican al volver a iniciar sesión.
+- **Nómina:** tipos de documento, ficha ampliada y archivos privados de empleados.
+- **Empleo:** cuentas de trabajador, perfiles profesionales, hojas de vida PDF, vacantes y postulaciones. Los emprendedores pueden consultar únicamente los perfiles compartidos.
+- **Historial laboral:** ofertas aceptadas, vinculaciones, finalizaciones, motivos privados, solicitudes de corrección y experiencias declaradas.
+
+Los datos y adjuntos se guardan localmente en `%LOCALAPPDATA%\SGAPE\datos`. Las cuentas antiguas se leen como emprendedoras y los documentos anteriores como CC. Para probar, usa dos cuentas de SGAPE en la **misma cuenta de Windows** y cierra sesión para alternarlas. No existe aún un servidor compartido ni sincronización entre computadores. No uses documentos reales en una demostración; el almacenamiento local no protege contra usuarios con acceso directo al sistema de archivos. No es facturación, nómina ni contratación legal certificada. Las vinculaciones de Empleo no crean automáticamente registros de Nómina: el empleador puede registrar el trabajador manualmente tras aceptar la oferta. No se incluyen fotos ni documentos de ejemplo reales en Git.
+
 ## Autores
 
 Alejandro Henríquez Quinchia y colaboradores · Universidad Popular del Cesar

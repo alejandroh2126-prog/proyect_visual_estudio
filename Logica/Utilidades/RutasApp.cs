@@ -10,10 +10,12 @@ namespace Logica.Utilidades
     /// </summary>
     public static class RutasApp
     {
+        internal static string? CarpetaDatosPruebas { get; set; }
         public static string CarpetaDatos
         {
             get
             {
+                if (CarpetaDatosPruebas != null) { Directory.CreateDirectory(CarpetaDatosPruebas); return CarpetaDatosPruebas; }
                 string ruta = Path.Combine(
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                     "SGAPE", "datos");
