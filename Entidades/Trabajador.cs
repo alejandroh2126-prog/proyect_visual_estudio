@@ -10,6 +10,8 @@ namespace Entidades
     {
         public int Id { get; set; }
         public int EmprendimientoId { get; set; }
+        public string TipoDocumento { get; set; } = "CC";
+        public string ClaveFicha { get; set; } = "";
         public Cargo Cargo { get; set; }
         public DateTime FechaIngreso { get; set; }
         public string Estado { get; set; }

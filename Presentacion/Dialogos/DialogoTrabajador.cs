@@ -16,6 +16,7 @@ namespace Presentacion.Dialogos
         private readonly TextBox _nombre;
         private readonly TextBox _apellido;
         private readonly TextBox _cedula;
+        private readonly ComboBox _tipoDocumento;
         private readonly ComboBox _cargo;
         private readonly DateTimePicker _fecha;
         private readonly ComboBox? _estado;
@@ -29,7 +30,10 @@ namespace Presentacion.Dialogos
 
             _nombre = Campo("Nombre *", new TextBox());
             _apellido = Campo("Apellido *", new TextBox());
-            _cedula = Campo("Cédula *", new TextBox());
+            _tipoDocumento = Campo("Tipo de documento *", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _tipoDocumento.Items.AddRange(TiposDocumento.Valores);
+            _tipoDocumento.SelectedIndex = 0;
+            _cedula = Campo("Número de documento *", new TextBox());
 
             _cargo = Campo("Cargo *", new ComboBox());
             _cargo.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -48,6 +52,7 @@ namespace Presentacion.Dialogos
                 _nombre.Text = editar.Nombre;
                 _apellido.Text = editar.Apellido;
                 _cedula.Text = editar.Cedula;
+                _tipoDocumento.SelectedItem = editar.TipoDocumento;
                 _fecha.Value = editar.FechaIngreso < _fecha.MinDate ? _fecha.MinDate : editar.FechaIngreso;
                 foreach (object item in _cargo.Items)
                 {
@@ -69,18 +74,18 @@ namespace Presentacion.Dialogos
             if (_editar == null)
             {
                 Trabajador nuevo = new Trabajador(0, _nombre.Text, _apellido.Text, _cedula.Text,
-                    cargo, _fecha.Value.Date, _emprendimientoId);
+                    cargo, _fecha.Value.Date, _emprendimientoId) { TipoDocumento = _tipoDocumento.Text };
                 _fabrica.Nomina.GuardarTrabajador(nuevo);
                 return;
             }
 
-            _editar.Nombre = _nombre.Text;
-            _editar.Apellido = _apellido.Text;
-            _editar.Cedula = _cedula.Text;
-            _editar.Cargo = cargo;
-            _editar.FechaIngreso = _fecha.Value.Date;
-            if (_estado != null && _estado.SelectedItem != null) _editar.Estado = _estado.SelectedItem.ToString()!;
-            _fabrica.Nomina.GuardarTrabajador(_editar);
+            Trabajador actualizado = new Trabajador(_editar.Id, _nombre.Text, _apellido.Text, _cedula.Text, cargo, _fecha.Value.Date, _emprendimientoId)
+            {
+                TipoDocumento = _tipoDocumento.Text,
+                ClaveFicha = _editar.ClaveFicha,
+                Estado = _estado?.SelectedItem?.ToString() ?? _editar.Estado
+            };
+            _fabrica.Nomina.GuardarTrabajador(actualizado);
         }
     }
 }

@@ -20,11 +20,12 @@ namespace Logica.Servicios
         private readonly RepositorioVentas _ventas;
         private readonly RepositorioMovimientos _movimientos;
         private readonly RepositorioPresupuestos _presupuestos;
+        private readonly ServicioFichaTrabajador _fichas;
 
         public ServicioEmprendimientos(RepositorioEmprendimientos emprendimientos, RepositorioCargos cargos,
             RepositorioTrabajadores trabajadores, RepositorioProductos productos,
             RepositorioVentas ventas, RepositorioMovimientos movimientos,
-            RepositorioPresupuestos presupuestos)
+            RepositorioPresupuestos presupuestos, ServicioFichaTrabajador fichas)
         {
             _emprendimientos = emprendimientos;
             _cargos = cargos;
@@ -32,7 +33,7 @@ namespace Logica.Servicios
             _productos = productos;
             _ventas = ventas;
             _movimientos = movimientos;
-            _presupuestos = presupuestos;
+            _presupuestos = presupuestos; _fichas = fichas;
         }
 
         public List<Emprendimiento> ListarDelUsuario()
@@ -72,6 +73,7 @@ namespace Logica.Servicios
             if (actual == null || actual.UsuarioId != Sesion.IdUsuario)
                 throw new ReglaDeNegocioException("Emprendimiento no encontrado.");
 
+            foreach (Trabajador t in _trabajadores.Listar().FindAll(t => t.EmprendimientoId == id)) _fichas.EliminarFicha(t.Id);
             _trabajadores.EliminarDonde(t => t.EmprendimientoId == id);
             _cargos.EliminarDonde(c => c.EmprendimientoId == id);
             _productos.EliminarDonde(p => p.EmprendimientoId == id);
