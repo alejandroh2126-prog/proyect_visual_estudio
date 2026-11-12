@@ -10,6 +10,7 @@ namespace Logica
     /// </summary>
     public class FabricaServicios
     {
+        public ServicioPerfilCuenta PerfilCuenta { get; }
         public ServicioAutenticacion Autenticacion { get; }
         public ServicioEmprendimientos Emprendimientos { get; }
         public ServicioNomina Nomina { get; }
@@ -34,6 +35,7 @@ namespace Logica
             RepositorioMovimientos movimientos = new RepositorioMovimientos();
             RepositorioPresupuestos presupuestos = new RepositorioPresupuestos();
 
+            PerfilCuenta = new ServicioPerfilCuenta(new RepositorioPerfilesCuenta());
             Autenticacion = new ServicioAutenticacion(usuarios);
             Finanzas = new ServicioFinanzas(movimientos);
             Presupuestos = new ServicioPresupuestos(presupuestos, Finanzas);

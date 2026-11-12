@@ -21,11 +21,13 @@ namespace Presentacion
             {
                 while (true)
                 {
+                    Presentacion.Comun.Tema.Aplicar(null);
                     using (FormLogin login = new FormLogin(fabrica))
                     {
                         if (login.ShowDialog() != DialogResult.OK) return;
                     }
 
+                    Presentacion.Comun.Mensajes.Ejecutar(() => Presentacion.Comun.Tema.Aplicar(fabrica.PerfilCuenta.Obtener()));
                     using (FormPrincipal principal = new FormPrincipal(fabrica))
                     {
                         principal.ShowDialog();

@@ -10,10 +10,17 @@ namespace Presentacion.Comun
     /// </summary>
     public static class Tema
     {
-        public static readonly Color VerdeOscuro = Color.FromArgb(8, 80, 65);
-        public static readonly Color Verde = Color.FromArgb(29, 158, 117);
+        public static Color VerdeOscuro { get; private set; } = Color.FromArgb(8, 80, 65);
+        public static Color Verde { get; private set; } = Color.FromArgb(29, 158, 117);
         public static readonly Color VerdeClaro = Color.FromArgb(225, 245, 238);
-        public static readonly Color Fondo = Color.FromArgb(240, 244, 248);
+        public static Color Fondo { get; private set; } = Color.FromArgb(240, 244, 248);
+        public static void Aplicar(Entidades.PerfilCuenta? p)
+        {
+            VerdeOscuro = Color.FromArgb(8, 80, 65); Verde = Color.FromArgb(29, 158, 117); Fondo = Color.FromArgb(240, 244, 248);
+            if (p == null) return;
+            try { if (p.ColorFondo != "") Fondo = ColorTranslator.FromHtml(p.ColorFondo); if (p.ColorBotones != "") { Verde = ColorTranslator.FromHtml(p.ColorBotones); VerdeOscuro = Color.FromArgb((int)(Verde.R * 0.65), (int)(Verde.G * 0.65), (int)(Verde.B * 0.65)); } }
+            catch (ArgumentException) { Aplicar(null); }
+        }
         public static readonly Color Texto = Color.FromArgb(26, 26, 24);
         public static readonly Color TextoSuave = Color.FromArgb(110, 110, 105);
         public static readonly Color Rojo = Color.FromArgb(226, 75, 74);
