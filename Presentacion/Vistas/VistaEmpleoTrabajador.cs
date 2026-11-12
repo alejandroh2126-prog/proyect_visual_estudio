@@ -12,7 +12,7 @@ namespace Presentacion.Vistas
         private readonly ComboBox _tipo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList };
         private readonly CheckBox _visible = new CheckBox { Text = "Compartir perfil y hoja de vida con emprendedores de esta instalación", AutoSize = true };
         private readonly DataGridView _vacantes = Tema.Tabla("Empresa", "Cargo", "Ciudad", "Salario", "Descripción");
-        private readonly DataGridView _postulaciones = Tema.Tabla("Empresa", "Cargo", "Fecha", "Estado");
+        private readonly DataGridView _postulaciones = Tema.Tabla("Empresa", "Cargo", "Fecha", "Salario mensual", "Estado");
         private readonly Label _cv = Tema.Etiqueta("");
         private readonly TextBox _buscar = new TextBox { Width = 220 };
         public VistaEmpleoTrabajador(FabricaServicios fabrica) : base(fabrica)
@@ -38,7 +38,9 @@ namespace Presentacion.Vistas
             actualizar.Click += (_, _) => CargarListas(); postular.Click += (_, _) => Mensajes.Ejecutar(() => { Vacante? v = _vacantes.Seleccionado<Vacante>(); if (v == null) throw new ReglaDeNegocioException("Selecciona una vacante."); Fabrica.Empleos.Postular(v.Id); CargarListas(); Mensajes.Info("Postulación registrada."); });
             ofertas.Fila(Tema.Barra(Tema.Etiqueta("Buscar empresa, cargo o ciudad:"), _buscar, actualizar, postular), false);
             _buscar.TextChanged += (_, _) => CargarListas(); ofertas.Fila(_vacantes, true);
-            TableLayoutPanel mis = Tema.ColumnaVertical(); Button refrescar = Tema.Boton("Actualizar", Tema.Gris); refrescar.Click += (_, _) => CargarListas(); mis.Fila(Tema.Barra(refrescar), false); mis.Fila(_postulaciones, true);
+            TableLayoutPanel mis = Tema.ColumnaVertical(); Button refrescar = Tema.Boton("Actualizar", Tema.Gris), aceptar = Tema.Boton("Aceptar oferta", Tema.Verde), rechazar = Tema.Boton("Rechazar oferta", Tema.Rojo);
+            refrescar.Click += (_, _) => CargarListas(); aceptar.Click += (_, _) => Responder(true); rechazar.Click += (_, _) => Responder(false);
+            mis.Fila(Tema.Barra(refrescar, aceptar, rechazar), false); mis.Fila(_postulaciones, true);
             TabControl tabs = new TabControl { Dock = DockStyle.Fill };
             tabs.TabPages.Add(new TabPage("Perfil") { Controls = { scroll } }); tabs.TabPages.Add(new TabPage("Buscar trabajo") { Controls = { ofertas } }); tabs.TabPages.Add(new TabPage("Mis postulaciones") { Controls = { mis } });
             tabs.SelectedIndexChanged += (_, _) => CargarListas(); Controls.Add(tabs);
@@ -51,6 +53,10 @@ namespace Presentacion.Vistas
             quitar.Click += (_, _) => { if (Mensajes.Confirmar("¿Quitar el documento privado?")) Mensajes.Ejecutar(() => Fabrica.Empleos.CambiarMiIdentificacion(reverso, null)); };
             return Tema.Barra(Tema.Etiqueta(titulo), subir, ver, quitar);
         }
+        private void Responder(bool aceptar)
+        {
+            Mensajes.Ejecutar(() => { Postulacion? p = _postulaciones.Seleccionado<Postulacion>(); if (p == null) throw new ReglaDeNegocioException("Selecciona una oferta."); if (Mensajes.Confirmar(aceptar ? "¿Aceptar y registrar la vinculación en SGAPE?" : "¿Rechazar la oferta?")) { Fabrica.Empleos.ResponderOferta(p.Id, aceptar); CargarListas(); } });
+        }
         private static Control Campo(string nombre, Control c) { c.Width = 360; return Tema.Barra(Tema.Etiqueta(nombre), c); }
         private void ActualizarCv() => _cv.Text = Fabrica.Empleos.ObtenerMiPerfil().HojaVida == "" ? "Sin CV" : "CV guardado";
         protected override void Recargar()
@@ -60,7 +66,7 @@ namespace Presentacion.Vistas
         }
         private void CargarListas()
         {
-            Mensajes.Ejecutar(() => { _vacantes.Rows.Clear(); _postulaciones.Rows.Clear(); foreach (Vacante v in Fabrica.Empleos.ListarVacantesPublicas()) if (Formato.Contiene(v.Empresa + " " + v.Cargo + " " + v.Ciudad, _buscar.Text)) _vacantes.AgregarFila(v, v.Empresa, v.Cargo, v.Ciudad, v.Salario == 0 ? "A convenir" : Formato.Moneda(v.Salario), v.Descripcion); foreach (Postulacion p in Fabrica.Empleos.ListarMisPostulaciones()) _postulaciones.AgregarFila(p, p.Empresa, p.Cargo, Formato.Fecha(p.Fecha), p.Estado); });
+            Mensajes.Ejecutar(() => { _vacantes.Rows.Clear(); _postulaciones.Rows.Clear(); foreach (Vacante v in Fabrica.Empleos.ListarVacantesPublicas()) if (Formato.Contiene(v.Empresa + " " + v.Cargo + " " + v.Ciudad, _buscar.Text)) _vacantes.AgregarFila(v, v.Empresa, v.Cargo, v.Ciudad, v.Salario == 0 ? "A convenir" : Formato.Moneda(v.Salario), v.Descripcion); foreach (Postulacion p in Fabrica.Empleos.ListarMisPostulaciones()) _postulaciones.AgregarFila(p, p.Empresa, p.Cargo, Formato.Fecha(p.Fecha), p.SalarioPropuesto == 0 ? "A convenir" : Formato.Moneda(p.SalarioPropuesto), p.Estado); });
         }
     }
 }

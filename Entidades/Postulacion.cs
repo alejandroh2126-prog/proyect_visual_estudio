@@ -14,5 +14,12 @@ namespace Entidades
         public string Cargo { get; set; } = "";
         public DateTime Fecha { get; set; } = DateTime.Now;
         public EstadoPostulacion Estado { get; set; }
+        public string NombreTrabajador { get; set; } = "";
+        public decimal SalarioPropuesto { get; set; }
+        public DateTime? InicioLaboral { get; set; }
+        public DateTime? FinLaboral { get; set; }
+        public string MotivoRetiro { get; set; } = "";
+        public string SolicitudRevision { get; set; } = "";
+        public string RespuestaRevision { get; set; } = "";
     }
 }

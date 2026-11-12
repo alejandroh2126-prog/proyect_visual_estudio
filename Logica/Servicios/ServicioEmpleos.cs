@@ -109,6 +109,8 @@ namespace Logica.Servicios
         }
         public void CerrarVacantesEmpresa(int empresaId)
         {
+            if (ListarPostulacionesEmpresa(empresaId).Exists(p => p.Estado == EstadoPostulacion.Contratada))
+                throw new ReglaDeNegocioException("Finaliza las vinculaciones activas antes de eliminar el emprendimiento.");
             foreach (Vacante v in ListarVacantesPropias(empresaId)) if (v.Abierta) CerrarVacante(v.Id);
         }
         public void Postular(int vacanteId)
@@ -118,7 +120,76 @@ namespace Logica.Servicios
             Vacante? v = _vacantes.ObtenerPorId(vacanteId);
             if (v == null || !Publicable(v)) throw new ReglaDeNegocioException("La vacante ya no está disponible.");
             if (_postulaciones.Listar().Exists(p => p.VacanteId == vacanteId && p.TrabajadorUsuarioId == perfil.UsuarioId)) throw new ReglaDeNegocioException("Ya te postulaste a esta vacante.");
-            _postulaciones.Insertar(new Postulacion { VacanteId = v.Id, TrabajadorUsuarioId = perfil.UsuarioId, EmprendedorUsuarioId = v.EmprendedorId, EmprendimientoId = v.EmprendimientoId, ClaveEmpresa = v.ClaveEmpresa, Empresa = v.Empresa, Cargo = v.Cargo, Estado = EstadoPostulacion.Pendiente });
+            _postulaciones.Insertar(new Postulacion { VacanteId = v.Id, TrabajadorUsuarioId = perfil.UsuarioId, EmprendedorUsuarioId = v.EmprendedorId, EmprendimientoId = v.EmprendimientoId, ClaveEmpresa = v.ClaveEmpresa, Empresa = v.Empresa, Cargo = v.Cargo, NombreTrabajador = Sesion.UsuarioActual!.Nombre, SalarioPropuesto = v.Salario, Estado = EstadoPostulacion.Pendiente });
+        }
+        private Postulacion ObtenerPostulacion(int id) => _postulaciones.ObtenerPorId(id) ?? throw new ReglaDeNegocioException("Postulación no encontrada.");
+        private Postulacion PostulacionEmpresa(int id)
+        {
+            int usuario = Exigir(RolUsuario.Emprendedor); Postulacion p = ObtenerPostulacion(id);
+            if (p.EmprendedorUsuarioId != usuario || AutorizarEmpresa(p.EmprendimientoId).ClaveLaboral != p.ClaveEmpresa) throw new ReglaDeNegocioException("Sin autorización para esta postulación.");
+            return p;
+        }
+        private Postulacion PostulacionPropia(int id)
+        {
+            int usuario = Exigir(RolUsuario.Trabajador); Postulacion p = ObtenerPostulacion(id);
+            if (p.TrabajadorUsuarioId != usuario) throw new ReglaDeNegocioException("Sin autorización para esta postulación.");
+            return p;
+        }
+        public void Ofertar(int id)
+        {
+            Postulacion p = PostulacionEmpresa(id);
+            if (p.Estado != EstadoPostulacion.Pendiente) throw new ReglaDeNegocioException("Solo se puede ofertar una postulación pendiente.");
+            Vacante? v = _vacantes.ObtenerPorId(p.VacanteId);
+            if (v == null || !Publicable(v)) throw new ReglaDeNegocioException("La vacante está cerrada.");
+            if (!_perfiles.Listar().Exists(x => x.UsuarioId == p.TrabajadorUsuarioId && x.Visible)) throw new ReglaDeNegocioException("El candidato retiró el acceso a su perfil.");
+            p.Estado = EstadoPostulacion.Oferta; _postulaciones.Actualizar(p);
+        }
+        public void Rechazar(int id)
+        {
+            Postulacion p = PostulacionEmpresa(id);
+            if (p.Estado != EstadoPostulacion.Pendiente && p.Estado != EstadoPostulacion.Oferta) throw new ReglaDeNegocioException("La postulación ya no está pendiente.");
+            p.Estado = EstadoPostulacion.Rechazada; _postulaciones.Actualizar(p);
+        }
+        public void ResponderOferta(int id, bool aceptar)
+        {
+            Postulacion p = PostulacionPropia(id);
+            if (p.Estado != EstadoPostulacion.Oferta) throw new ReglaDeNegocioException("No hay una oferta pendiente.");
+            if (aceptar)
+            {
+                Vacante? v = _vacantes.ObtenerPorId(p.VacanteId);
+                if (v == null || !Publicable(v)) throw new ReglaDeNegocioException("La vacante ya no está disponible.");
+                p.Estado = EstadoPostulacion.Contratada; p.InicioLaboral = DateTime.Today; p.NombreTrabajador = Sesion.UsuarioActual!.Nombre;
+            }
+            else p.Estado = EstadoPostulacion.Rechazada;
+            _postulaciones.Actualizar(p);
+        }
+        public void FinalizarVinculacion(int id, string motivo)
+        {
+            Postulacion p = PostulacionEmpresa(id);
+            if (p.Estado != EstadoPostulacion.Contratada) throw new ReglaDeNegocioException("Solo se finalizan vinculaciones activas.");
+            if (!MotivosRetiro.EsValido(motivo)) throw new ReglaDeNegocioException("Motivo inválido.");
+            p.Estado = EstadoPostulacion.Finalizada; p.FinLaboral = DateTime.Today; p.MotivoRetiro = motivo;
+            _postulaciones.Actualizar(p);
+        }
+        public void SolicitarRevision(int id, string solicitud)
+        {
+            Postulacion p = PostulacionPropia(id);
+            if (p.Estado != EstadoPostulacion.Finalizada) throw new ReglaDeNegocioException("Solo se revisan vinculaciones finalizadas.");
+            Validar.Requerido(solicitud, "Solicitud"); if (solicitud.Length > 1000) throw new ReglaDeNegocioException("Máximo 1000 caracteres.");
+            p.SolicitudRevision = solicitud.Trim(); p.RespuestaRevision = ""; _postulaciones.Actualizar(p);
+        }
+        public void ResolverRevision(int id, string motivo, bool modificar)
+        {
+            int usuario = Exigir(RolUsuario.Emprendedor); Postulacion p = ObtenerPostulacion(id);
+            if (p.EmprendedorUsuarioId != usuario) throw new ReglaDeNegocioException("Sin autorización.");
+            if (p.Estado != EstadoPostulacion.Finalizada || p.SolicitudRevision == "" || p.RespuestaRevision != "") throw new ReglaDeNegocioException("No hay una solicitud pendiente.");
+            if (modificar) { if (!MotivosRetiro.EsValido(motivo)) throw new ReglaDeNegocioException("Motivo inválido."); p.MotivoRetiro = motivo; }
+            p.RespuestaRevision = modificar ? "Motivo corregido" : "Motivo mantenido"; _postulaciones.Actualizar(p);
+        }
+        public List<Postulacion> ListarHistorialEmprendedor()
+        {
+            int id = Exigir(RolUsuario.Emprendedor);
+            return _postulaciones.Listar().FindAll(p => p.EmprendedorUsuarioId == id && p.Estado == EstadoPostulacion.Finalizada);
         }
         public List<Postulacion> ListarMisPostulaciones() { int id = Exigir(RolUsuario.Trabajador); return _postulaciones.Listar().FindAll(p => p.TrabajadorUsuarioId == id); }
         public List<Postulacion> ListarPostulacionesEmpresa(int empresaId) { Emprendimiento e = AutorizarEmpresa(empresaId); return _postulaciones.Listar().FindAll(p => p.EmprendimientoId == empresaId && p.EmprendedorUsuarioId == Sesion.IdUsuario && p.ClaveEmpresa == e.ClaveLaboral); }
