@@ -10,7 +10,7 @@ namespace Logica.Repositorios
 		protected override string Serializar(Emprendimiento e)
 		{
 			return CsvUtil.Unir(CsvUtil.DeEntero(e.Id), CsvUtil.DeEntero(e.UsuarioId), e.Nombre,
-				e.Descripcion, e.Sector, CsvUtil.DeFecha(e.FechaInicio), e.Estado);
+				e.Descripcion, e.Sector, CsvUtil.DeFecha(e.FechaInicio), e.Estado, e.ClaveLaboral);
 		}
 
 		protected override Emprendimiento? Deserializar(string[] c)
@@ -23,7 +23,8 @@ namespace Logica.Repositorios
 				Descripcion = c[3],
 				Sector = c[4],
 				FechaInicio = CsvUtil.AFecha(c[5]),
-				Estado = c[6]
+				Estado = c[6],
+				ClaveLaboral = c.Length > 7 ? c[7] : ""
 			};
 		}
 

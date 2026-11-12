@@ -100,6 +100,7 @@ namespace Presentacion
             Agregar(opciones, "Reportes", new VistaReportes(_fabrica));
             Agregar(opciones, "Asistente", new VistaAsistente(_fabrica));
             Agregar(opciones, "Mi perfil", new VistaPerfilCuenta(_fabrica));
+            Agregar(opciones, "Empleo", new VistaEmpleoEmprendedor(_fabrica));
 
             Button salir = CrearBotonMenu("Cerrar sesión");
             salir.Dock = DockStyle.Fill;
@@ -216,6 +217,12 @@ namespace Presentacion
             _contenido.Controls.Clear();
             _contenido.Controls.Add(_vistaActual);
             _vistaActual.Mostrar(EmprendimientoSeleccionado);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) foreach (VistaBase vista in _vistas.Values) if (!vista.IsDisposed) vista.Dispose();
+            base.Dispose(disposing);
         }
 
         private void CerrarSesion()

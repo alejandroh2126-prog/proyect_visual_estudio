@@ -14,6 +14,8 @@ namespace Presentacion
         private static void Main()
         {
             ApplicationConfiguration.Initialize();
+            using System.Threading.Mutex mutex = new System.Threading.Mutex(true, @"Local\SGAPE-Datos-UnaInstancia", out bool primera);
+            if (!primera) { MessageBox.Show("SGAPE ya está abierto. Cierra sesión para cambiar de cuenta.", "SGAPE"); return; }
             FabricaServicios fabrica = new FabricaServicios();
             fabrica.AsistenteIA.IniciarOllama();   // abre la IA local en segundo plano
 
@@ -21,6 +23,7 @@ namespace Presentacion
             {
                 while (true)
                 {
+                    fabrica.AsistenteNube.ReiniciarConversacion();
                     Presentacion.Comun.Tema.Aplicar(null);
                     using (FormLogin login = new FormLogin(fabrica))
                     {
@@ -28,7 +31,8 @@ namespace Presentacion
                     }
 
                     Presentacion.Comun.Mensajes.Ejecutar(() => Presentacion.Comun.Tema.Aplicar(fabrica.PerfilCuenta.Obtener()));
-                    using (FormPrincipal principal = new FormPrincipal(fabrica))
+                    using (Form principal = Logica.Utilidades.Sesion.UsuarioActual?.Rol == Entidades.RolUsuario.Trabajador
+                        ? new FormTrabajador(fabrica) : new FormPrincipal(fabrica))
                     {
                         principal.ShowDialog();
                         if (principal.DialogResult != DialogResult.Retry) return;
@@ -37,7 +41,7 @@ namespace Presentacion
             }
             finally
             {
-                fabrica.AsistenteIA.DetenerOllama();   // la cierra al salir (solo si SGAPE la abrió)
+                try { fabrica.AsistenteIA.DetenerOllama(); } finally { mutex.ReleaseMutex(); }
             }
         }
     }

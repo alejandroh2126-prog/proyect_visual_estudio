@@ -21,8 +21,9 @@ namespace Logica.Servicios
             _usuarios = usuarios;
         }
 
-        public Usuario Registrar(string nombre, string email, string clave)
+        public Usuario Registrar(string nombre, string email, string clave, RolUsuario rol = RolUsuario.Emprendedor)
         {
+            if (!Enum.IsDefined(rol)) throw new ReglaDeNegocioException("Tipo de cuenta inválido.");
             Validar.Requerido(nombre, "Nombre");
             Validar.Correo(email);
             Validar.Requerido(clave, "Contraseña");
@@ -38,6 +39,7 @@ namespace Logica.Servicios
 
             Usuario nuevo = new Usuario
             {
+                Rol = rol,
                 Nombre = nombre.Trim(),
                 Email = correo,
                 ClaveHash = GenerarHash(clave),

@@ -39,6 +39,7 @@ namespace Logica.Servicios
 
         private readonly ServicioAsistente _respaldo;
         private readonly List<MensajeChat> _historial = new List<MensajeChat>();
+        private int _generacionConversacion;
         private Process? _procesoOllama;   // solo existe si SGAPE tuvo que abrir Ollama
         private Task? _tareaInicio;
 
@@ -52,6 +53,7 @@ namespace Logica.Servicios
 
         public void ReiniciarConversacion()
         {
+            _generacionConversacion++;
             _historial.Clear();
         }
 
@@ -146,11 +148,13 @@ namespace Logica.Servicios
         /// </summary>
         public async Task<string> ResponderAsync(string mensaje, Action<string>? alRecibirTrozo = null)
         {
+            int generacion = _generacionConversacion;
             string pregunta = mensaje.Trim();
             if (pregunta.Length == 0) return "Escribe tu pregunta y te ayudo.";
 
             // Si Ollama se esta abriendo en este momento, se espera a que termine de arrancar.
             if (_tareaInicio != null) await _tareaInicio;
+            if (generacion != _generacionConversacion) return "Conversación finalizada.";
 
             StringBuilder total = new StringBuilder();
             try
@@ -168,6 +172,7 @@ namespace Logica.Servicios
                             string? linea;
                             while ((linea = await lector.ReadLineAsync()) != null)
                             {
+                                if (generacion != _generacionConversacion) return "Conversación finalizada.";
                                 if (linea.Length == 0) continue;
                                 using (JsonDocument doc = JsonDocument.Parse(linea))
                                 {
@@ -203,6 +208,7 @@ namespace Logica.Servicios
                 return _respaldo.Responder(pregunta);
             }
 
+            if (generacion != _generacionConversacion) return "Conversación finalizada.";
             UltimaRespuestaFueDeRespaldo = false;
             _historial.Add(new MensajeChat("user", pregunta));
             _historial.Add(new MensajeChat("assistant", texto));

@@ -23,7 +23,7 @@ namespace Logica.Servicios
         };
 
         private readonly ServicioAsistenteIA _respaldo;
-        private readonly string _sesion = Guid.NewGuid().ToString("N"); // n8n recuerda la conversacion por sesion
+        private string _sesion = Guid.NewGuid().ToString("N"); // n8n recuerda la conversacion por sesion
 
         /// <summary>Indica cual de los tres asistentes respondio la ultima pregunta.</summary>
         public FuenteAsistente UltimaFuente { get; private set; } = FuenteAsistente.Nube;
@@ -39,12 +39,14 @@ namespace Logica.Servicios
         /// </summary>
         public async Task<string> ResponderAsync(string mensaje, Action<string>? alRecibirTrozo = null)
         {
+            string sesion = _sesion;
             string pregunta = mensaje.Trim();
             if (pregunta.Length == 0) return "Escribe tu pregunta y te ayudo.";
 
             try
             {
                 string respuesta = await PreguntarAlWebhookAsync(pregunta);
+                if (sesion != _sesion) return "Conversación finalizada.";
                 UltimaFuente = FuenteAsistente.Nube;
                 alRecibirTrozo?.Invoke(respuesta);
                 return respuesta;
@@ -52,10 +54,18 @@ namespace Logica.Servicios
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException ||
                                        ex is JsonException || ex is InvalidOperationException)
             {
+                if (sesion != _sesion) return "Conversación finalizada.";
                 string respuesta = await _respaldo.ResponderAsync(pregunta, alRecibirTrozo);
+                if (sesion != _sesion) return "Conversación finalizada.";
                 UltimaFuente = _respaldo.UltimaRespuestaFueDeRespaldo ? FuenteAsistente.Basico : FuenteAsistente.Local;
                 return respuesta;
             }
+        }
+
+        public void ReiniciarConversacion()
+        {
+            _sesion = Guid.NewGuid().ToString("N");
+            _respaldo.ReiniciarConversacion();
         }
 
         private async Task<string> PreguntarAlWebhookAsync(string pregunta)
