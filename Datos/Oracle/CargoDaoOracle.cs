@@ -2,7 +2,7 @@ using System.Data;
 using System.Data.Common;
 using Entidades;
 
-namespace Logica.Datos.Oracle
+namespace Datos.Oracle
 {
     public class CargoDaoOracle : DaoOracle<Cargo>, ICargoDao
     {

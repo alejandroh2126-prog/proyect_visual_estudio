@@ -1,6 +1,6 @@
-using Logica.Datos.Oracle;
+using Datos.Oracle;
 
-namespace Logica.Datos
+namespace Datos
 {
     /// <summary>
     /// PATRON ABSTRACT FACTORY. Es la unica clase que decide QUE DAOs se crean.
@@ -20,7 +20,7 @@ namespace Logica.Datos
         public abstract IPresupuestoDao CrearPresupuestoDao();
 
         /// <summary>Comprueba que la base de datos esta lista. Lanza ReglaDeNegocioException si no lo esta.</summary>
-        public virtual void Verificar()
+       public virtual void Verificar()
         {
         }
 

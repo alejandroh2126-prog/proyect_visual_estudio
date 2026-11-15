@@ -2,10 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Entidades\Entidades.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
+    <ProjectReference Include="..\Datos\Datos.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

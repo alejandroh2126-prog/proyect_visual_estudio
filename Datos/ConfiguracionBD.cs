@@ -3,7 +3,7 @@ using System.IO;
 using System.Text.Json;
 using Logica.Utilidades;
 
-namespace Logica.Datos
+namespace Datos
 {
     /// <summary>
     /// UNA SOLA MISION: leer de donde se guardan los datos y como conectarse.

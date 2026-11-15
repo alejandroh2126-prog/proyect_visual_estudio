@@ -1,5 +1,5 @@
 using System;
-using Logica.Datos;
+using Datos;
 using Logica.Servicios;
 using Logica.Utilidades;
 

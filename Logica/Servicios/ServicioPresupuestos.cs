@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using Entidades;
-using Logica.Datos;
+using Datos;
 using Logica.Utilidades;
 
 namespace Logica.Servicios

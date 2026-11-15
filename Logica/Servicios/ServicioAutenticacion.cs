@@ -1,7 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using Entidades;
-using Logica.Datos;
+using Datos;
 using Logica.Utilidades;
 
 namespace Logica.Servicios

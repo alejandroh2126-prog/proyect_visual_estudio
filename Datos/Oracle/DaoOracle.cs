@@ -3,7 +3,7 @@ using System.Data;
 using System.Data.Common;
 using Logica.Utilidades;
 
-namespace Logica.Datos.Oracle
+namespace Datos.Oracle
 {
     /// <summary>
     /// PATRON DAO (implementacion Oracle). La logica comun de guardar y leer vive aqui UNA vez.

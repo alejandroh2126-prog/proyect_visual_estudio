@@ -3,7 +3,7 @@ using System.Data;
 using System.Data.Common;
 using Entidades;
 
-namespace Logica.Datos.Oracle
+namespace Datos.Oracle
 {
     /// <summary>
     /// Una venta vive en DOS tablas: sg_venta (cabecera) y sg_detalle_venta (productos vendidos).

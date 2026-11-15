@@ -1,4 +1,4 @@
-namespace Logica.Datos.Oracle
+namespace Datos.Oracle
 {
     /// <summary>Fabrica concreta: crea los DAOs que guardan los datos en una base de datos Oracle.</summary>
     public class FabricaDaoOracle : FabricaDao

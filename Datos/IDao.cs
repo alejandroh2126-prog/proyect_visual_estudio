@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using Entidades;
 
-namespace Logica.Datos
+namespace Datos
 {
     /// <summary>
     /// PATRON DAO (Data Access Object). Un DAO es el UNICO que sabe donde y como se guardan los datos
