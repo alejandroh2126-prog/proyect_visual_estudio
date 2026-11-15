@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Entidades;
-using Logica.Repositorios;
+using Logica.Datos;
 using Logica.Utilidades;
 
 namespace Logica.Servicios
@@ -9,10 +9,10 @@ namespace Logica.Servicios
     /// <summary>UNA SOLA MISION: productos y control de stock (con alertas de stock bajo).</summary>
     public class ServicioInventario
     {
-        private readonly RepositorioProductos _productos;
+        private readonly IProductoDao _productos;
         private readonly ServicioFinanzas _finanzas;
 
-        public ServicioInventario(RepositorioProductos productos, ServicioFinanzas finanzas)
+        public ServicioInventario(IProductoDao productos, ServicioFinanzas finanzas)
         {
             _productos = productos;
             _finanzas = finanzas;

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Entidades;
-using Logica.Repositorios;
+using Logica.Datos;
 using Logica.Utilidades;
 
 namespace Logica.Servicios
@@ -13,18 +13,18 @@ namespace Logica.Servicios
     /// </summary>
     public class ServicioEmprendimientos
     {
-        private readonly RepositorioEmprendimientos _emprendimientos;
-        private readonly RepositorioCargos _cargos;
-        private readonly RepositorioTrabajadores _trabajadores;
-        private readonly RepositorioProductos _productos;
-        private readonly RepositorioVentas _ventas;
-        private readonly RepositorioMovimientos _movimientos;
-        private readonly RepositorioPresupuestos _presupuestos;
+        private readonly IEmprendimientoDao _emprendimientos;
+        private readonly ICargoDao _cargos;
+        private readonly ITrabajadorDao _trabajadores;
+        private readonly IProductoDao _productos;
+        private readonly IVentaDao _ventas;
+        private readonly IMovimientoDao _movimientos;
+        private readonly IPresupuestoDao _presupuestos;
 
-        public ServicioEmprendimientos(RepositorioEmprendimientos emprendimientos, RepositorioCargos cargos,
-            RepositorioTrabajadores trabajadores, RepositorioProductos productos,
-            RepositorioVentas ventas, RepositorioMovimientos movimientos,
-            RepositorioPresupuestos presupuestos)
+        public ServicioEmprendimientos(IEmprendimientoDao emprendimientos, ICargoDao cargos,
+            ITrabajadorDao trabajadores, IProductoDao productos,
+            IVentaDao ventas, IMovimientoDao movimientos,
+            IPresupuestoDao presupuestos)
         {
             _emprendimientos = emprendimientos;
             _cargos = cargos;
@@ -72,12 +72,12 @@ namespace Logica.Servicios
             if (actual == null || actual.UsuarioId != Sesion.IdUsuario)
                 throw new ReglaDeNegocioException("Emprendimiento no encontrado.");
 
-            _trabajadores.EliminarDonde(t => t.EmprendimientoId == id);
-            _cargos.EliminarDonde(c => c.EmprendimientoId == id);
-            _productos.EliminarDonde(p => p.EmprendimientoId == id);
-            _ventas.EliminarDonde(v => v.EmprendimientoId == id);
-            _movimientos.EliminarDonde(m => m.EmprendimientoId == id);
-            _presupuestos.EliminarDonde(p => p.EmprendimientoId == id);
+            _trabajadores.EliminarPorEmprendimiento(id);
+            _cargos.EliminarPorEmprendimiento(id);
+            _productos.EliminarPorEmprendimiento(id);
+            _ventas.EliminarPorEmprendimiento(id);
+            _movimientos.EliminarPorEmprendimiento(id);
+            _presupuestos.EliminarPorEmprendimiento(id);
             _emprendimientos.Eliminar(id);
         }
     }

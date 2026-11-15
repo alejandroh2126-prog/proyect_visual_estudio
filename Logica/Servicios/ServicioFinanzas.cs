@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Entidades;
-using Logica.Repositorios;
+using Logica.Datos;
 using Logica.Utilidades;
 
 namespace Logica.Servicios
@@ -12,9 +12,9 @@ namespace Logica.Servicios
     /// </summary>
     public class ServicioFinanzas
     {
-        private readonly RepositorioMovimientos _movimientos;
+        private readonly IMovimientoDao _movimientos;
 
-        public ServicioFinanzas(RepositorioMovimientos movimientos)
+        public ServicioFinanzas(IMovimientoDao movimientos)
         {
             _movimientos = movimientos;
         }

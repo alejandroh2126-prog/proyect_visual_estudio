@@ -1,12 +1,14 @@
-using Logica.Repositorios;
+using System;
+using Logica.Datos;
 using Logica.Servicios;
+using Logica.Utilidades;
 
 namespace Logica
 {
     /// <summary>
     /// UNA SOLA MISION: armar todas las piezas y conectarlas entre si (inyeccion de dependencias manual).
-    /// La capa de Presentacion solo conoce esta clase y los servicios; nunca los repositorios.
-    /// Asi, si manana cambias los archivos CSV por una base de datos, solo se toca Logica.
+    /// La capa de Presentacion solo conoce esta clase y los servicios; nunca los DAOs.
+    /// Los DAOs se piden a una FabricaDao (Oracle, segun conexion.json); los servicios solo ven interfaces.
     /// </summary>
     public class FabricaServicios
     {
@@ -20,19 +22,22 @@ namespace Logica
         public ServicioFacturas Facturas { get; }
         public ServicioReportes Reportes { get; }
         public ServicioAsistente Asistente { get; }
-        public ServicioAsistenteIA AsistenteIA { get; }
         public ServicioAsistenteN8n AsistenteNube { get; }
 
         public FabricaServicios()
         {
-            RepositorioUsuarios usuarios = new RepositorioUsuarios();
-            RepositorioEmprendimientos emprendimientos = new RepositorioEmprendimientos();
-            RepositorioCargos cargos = new RepositorioCargos();
-            RepositorioTrabajadores trabajadores = new RepositorioTrabajadores(cargos);
-            RepositorioProductos productos = new RepositorioProductos();
-            RepositorioVentas ventas = new RepositorioVentas();
-            RepositorioMovimientos movimientos = new RepositorioMovimientos();
-            RepositorioPresupuestos presupuestos = new RepositorioPresupuestos();
+            // Si no hay conexion.json o Oracle no responde, esto lanza ReglaDeNegocioException y Program.cs la muestra.
+            FabricaDao fabricaDao = FabricaDao.Crear(ConfiguracionBD.Cargar());
+            fabricaDao.Verificar();
+
+            IUsuarioDao usuarios = fabricaDao.CrearUsuarioDao();
+            IEmprendimientoDao emprendimientos = fabricaDao.CrearEmprendimientoDao();
+            ICargoDao cargos = fabricaDao.CrearCargoDao();
+            ITrabajadorDao trabajadores = fabricaDao.CrearTrabajadorDao();
+            IProductoDao productos = fabricaDao.CrearProductoDao();
+            IVentaDao ventas = fabricaDao.CrearVentaDao();
+            IMovimientoDao movimientos = fabricaDao.CrearMovimientoDao();
+            IPresupuestoDao presupuestos = fabricaDao.CrearPresupuestoDao();
 
             Autenticacion = new ServicioAutenticacion(usuarios);
             Finanzas = new ServicioFinanzas(movimientos);
@@ -44,8 +49,7 @@ namespace Logica
             Facturas = new ServicioFacturas();
             Reportes = new ServicioReportes(Ventas, Inventario, Finanzas);
             Asistente = new ServicioAsistente();
-            AsistenteIA = new ServicioAsistenteIA(Asistente);
-            AsistenteNube = new ServicioAsistenteN8n(AsistenteIA);
+            AsistenteNube = new ServicioAsistenteN8n(Asistente);
         }
     }
 }

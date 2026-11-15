@@ -14,28 +14,29 @@ namespace Presentacion
         private static void Main()
         {
             ApplicationConfiguration.Initialize();
-            FabricaServicios fabrica = new FabricaServicios();
-            fabrica.AsistenteIA.IniciarOllama();   // abre la IA local en segundo plano
-
+            FabricaServicios fabrica;
             try
             {
-                while (true)
-                {
-                    using (FormLogin login = new FormLogin(fabrica))
-                    {
-                        if (login.ShowDialog() != DialogResult.OK) return;
-                    }
-
-                    using (FormPrincipal principal = new FormPrincipal(fabrica))
-                    {
-                        principal.ShowDialog();
-                        if (principal.DialogResult != DialogResult.Retry) return;
-                    }
-                }
+                fabrica = new FabricaServicios();
             }
-            finally
+            catch (Exception ex)
             {
-                fabrica.AsistenteIA.DetenerOllama();   // la cierra al salir (solo si SGAPE la abrió)
+                MessageBox.Show(ex.Message, "SGAPE - Base de datos", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            while (true)
+            {
+                using (FormLogin login = new FormLogin(fabrica))
+                {
+                    if (login.ShowDialog() != DialogResult.OK) return;
+                }
+
+                using (FormPrincipal principal = new FormPrincipal(fabrica))
+                {
+                    principal.ShowDialog();
+                    if (principal.DialogResult != DialogResult.Retry) return;
+                }
             }
         }
     }

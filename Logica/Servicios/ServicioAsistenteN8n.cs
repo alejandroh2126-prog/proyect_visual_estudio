@@ -9,8 +9,8 @@ namespace Logica.Servicios
     /// <summary>
     /// UNA SOLA MISION: enviar la pregunta al workflow de n8n (Gemini + base de conocimiento en Oracle)
     /// y devolver su respuesta. Es la misma "inteligencia" del bot de Telegram.
-    /// Si no hay internet o n8n no responde, pasa la pregunta a la IA local (Ollama) y, si tampoco
-    /// esta disponible, al asistente basico por palabras clave. El chat nunca se queda sin responder.
+    /// Si no hay internet o n8n no responde, usa el asistente basico por palabras clave:
+    /// el chat nunca se queda sin responder.
     /// </summary>
     public class ServicioAsistenteN8n
     {
@@ -22,22 +22,18 @@ namespace Logica.Servicios
             Timeout = TimeSpan.FromSeconds(60)
         };
 
-        private readonly ServicioAsistenteIA _respaldo;
+        private readonly ServicioAsistente _respaldo;
         private readonly string _sesion = Guid.NewGuid().ToString("N"); // n8n recuerda la conversacion por sesion
 
-        /// <summary>Indica cual de los tres asistentes respondio la ultima pregunta.</summary>
+        /// <summary>Indica cual de los dos asistentes respondio la ultima pregunta.</summary>
         public FuenteAsistente UltimaFuente { get; private set; } = FuenteAsistente.Nube;
 
-        public ServicioAsistenteN8n(ServicioAsistenteIA respaldo)
+        public ServicioAsistenteN8n(ServicioAsistente respaldo)
         {
             _respaldo = respaldo;
         }
 
-        /// <summary>
-        /// Responde la pregunta. alRecibirTrozo se ejecuta al llegar texto: una sola vez con la respuesta
-        /// completa si responde n8n, o varias veces si responde Ollama. No se usa si responde el modo basico.
-        /// </summary>
-        public async Task<string> ResponderAsync(string mensaje, Action<string>? alRecibirTrozo = null)
+        public async Task<string> ResponderAsync(string mensaje)
         {
             string pregunta = mensaje.Trim();
             if (pregunta.Length == 0) return "Escribe tu pregunta y te ayudo.";
@@ -46,15 +42,13 @@ namespace Logica.Servicios
             {
                 string respuesta = await PreguntarAlWebhookAsync(pregunta);
                 UltimaFuente = FuenteAsistente.Nube;
-                alRecibirTrozo?.Invoke(respuesta);
                 return respuesta;
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException ||
                                        ex is JsonException || ex is InvalidOperationException)
             {
-                string respuesta = await _respaldo.ResponderAsync(pregunta, alRecibirTrozo);
-                UltimaFuente = _respaldo.UltimaRespuestaFueDeRespaldo ? FuenteAsistente.Basico : FuenteAsistente.Local;
-                return respuesta;
+                UltimaFuente = FuenteAsistente.Basico;
+                return _respaldo.Responder(pregunta);
             }
         }
 

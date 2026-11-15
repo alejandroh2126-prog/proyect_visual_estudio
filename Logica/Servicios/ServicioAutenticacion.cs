@@ -1,22 +1,22 @@
 using System;
 using System.Security.Cryptography;
 using Entidades;
-using Logica.Repositorios;
+using Logica.Datos;
 using Logica.Utilidades;
 
 namespace Logica.Servicios
 {
     /// <summary>
     /// UNA SOLA MISION: registrar usuarios e iniciar sesion.
-    /// BAJO ACOPLAMIENTO: solo conoce a RepositorioUsuarios (se lo entregan en el constructor).
+    /// BAJO ACOPLAMIENTO: solo conoce a IUsuarioDao (se lo entregan en el constructor).
     /// Las claves se guardan con PBKDF2 + sal aleatoria (equivalente al bcrypt del proyecto en Node).
     /// </summary>
     public class ServicioAutenticacion
     {
         private const int Iteraciones = 100000;
-        private readonly RepositorioUsuarios _usuarios;
+        private readonly IUsuarioDao _usuarios;
 
-        public ServicioAutenticacion(RepositorioUsuarios usuarios)
+        public ServicioAutenticacion(IUsuarioDao usuarios)
         {
             _usuarios = usuarios;
         }

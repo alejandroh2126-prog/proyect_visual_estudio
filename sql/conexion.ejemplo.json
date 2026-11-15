@@ -1,0 +1,6 @@
+{
+  "usuario": "ADMIN",
+  "clave": "TU_CLAVE_DE_LA_BASE_DE_DATOS",
+  "dataSource": "sgape_low",
+  "carpetaWallet": "C:\\Users\\TU_USUARIO\\Wallet_SGAPE"
+}

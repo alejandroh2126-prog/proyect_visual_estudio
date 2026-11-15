@@ -68,32 +68,22 @@ namespace Presentacion.Vistas
             _entrada.Clear();
             _entrada.Enabled = false;
             _chat.AppendText("Tú: " + pregunta + Environment.NewLine);
-            _chat.AppendText("Asistente: ");
 
             try
             {
-                bool llegoTexto = false;
-                string respuesta = await Fabrica.AsistenteNube.ResponderAsync(pregunta, trozo =>
-                {
-                    llegoTexto = true;
-                    _chat.AppendText(trozo);
-                });
+                string respuesta = await Fabrica.AsistenteNube.ResponderAsync(pregunta);
+                _chat.AppendText("Asistente: " + respuesta + Environment.NewLine);
 
-                // El modo basico no entrega trozos: se muestra la respuesta completa.
-                if (!llegoTexto) _chat.AppendText(respuesta);
-
-                if (Fabrica.AsistenteNube.UltimaFuente == FuenteAsistente.Local)
-                    _chat.AppendText(Environment.NewLine + "(sin conexión a la nube: respondió la IA local)");
-                else if (Fabrica.AsistenteNube.UltimaFuente == FuenteAsistente.Basico)
-                    _chat.AppendText(Environment.NewLine + "(modo básico: sin conexión a la nube ni a la IA local)");
+                if (Fabrica.AsistenteNube.UltimaFuente == FuenteAsistente.Basico)
+                    _chat.AppendText("(modo básico: sin conexión a la nube)" + Environment.NewLine);
             }
             catch (Exception ex)
             {
-                _chat.AppendText("No pude responder: " + ex.Message);
+                _chat.AppendText("No pude responder: " + ex.Message + Environment.NewLine);
             }
             finally
             {
-                _chat.AppendText(Environment.NewLine + Environment.NewLine);
+                _chat.AppendText(Environment.NewLine);
                 _entrada.Enabled = true;
                 _entrada.Focus();
             }
