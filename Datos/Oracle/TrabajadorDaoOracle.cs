@@ -2,7 +2,7 @@ using System.Data;
 using System.Data.Common;
 using Entidades;
 
-namespace Logica.Datos.Oracle
+namespace Datos.Oracle
 {
     /// <summary>
     /// El trabajador trae su cargo en la misma consulta (JOIN), igual que el DAO CSV resuelve el cargo

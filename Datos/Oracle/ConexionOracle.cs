@@ -4,7 +4,7 @@ using System.Data.Common;
 using Logica.Utilidades;
 using Oracle.ManagedDataAccess.Client;
 
-namespace Logica.Datos.Oracle
+namespace Datos.Oracle
 {
     /// <summary>
     /// UNA SOLA MISION: abrir conexiones a Oracle y traducir sus errores a mensajes que el usuario entienda.
@@ -24,7 +24,7 @@ namespace Logica.Datos.Oracle
             if (!string.IsNullOrWhiteSpace(config.CarpetaWallet))
             {
                 // Autonomous Database: la carpeta del wallet trae tnsnames.ora y cwallet.sso.
-                OracleConfiguration.TnsAdminLocation = config.CarpetaWallet;
+                OracleConfiguration.TnsAdmin = config.CarpetaWallet;
                 OracleConfiguration.WalletLocation = config.CarpetaWallet;
             }
 
