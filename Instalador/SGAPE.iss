@@ -2,11 +2,11 @@
 ;  SGAPE - Script del instalador (Inno Setup 6)
 ;  1) Ejecuta publicar.bat (genera Publicado\SGAPE.exe)
 ;  2) Abre este archivo con Inno Setup y pulsa "Compile" (Ctrl+F9)
-;  3) El instalador queda en Instalador\Salida\SGAPE-Instalador-1.0.0.exe
+;  3) El instalador queda en Instalador\Salida\SGAPE-Instalador.exe
 ; ============================================================
 
 #define NombreApp "SGAPE"
-#define VersionApp "1.0.0"
+#define VersionApp "1.1.0"
 #define Editor "Universidad Popular del Cesar"
 
 [Setup]
@@ -18,7 +18,7 @@ DefaultDirName={autopf}\{#NombreApp}
 DefaultGroupName={#NombreApp}
 DisableProgramGroupPage=yes
 OutputDir=Salida
-OutputBaseFilename=SGAPE-Instalador-{#VersionApp}
+OutputBaseFilename=SGAPE-Instalador
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
