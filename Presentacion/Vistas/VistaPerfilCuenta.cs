@@ -25,7 +25,7 @@ namespace Presentacion.Vistas
             _fondo.Click += (_, _) => ElegirColor(true);
             _botones.Click += (_, _) => ElegirColor(false);
             defecto.Click += (_, _) => { _colorFondo = _colorBotones = ""; Pintar(); };
-            guardar.Click += (_, _) => { if (Mensajes.Ejecutar(() => Fabrica.PerfilCuenta.Guardar(_colorFondo, _colorBotones, _fotoNueva, _quitar))) { Recargar(); Mensajes.Info("Perfil guardado. Cierra sesión y vuelve a entrar para aplicar los colores."); } };
+            guardar.Click += (_, _) => { if (Mensajes.Ejecutar(() => Fabrica.PerfilCuenta.Guardar(_colorFondo, _colorBotones, _fotoNueva, _quitar))) { Mensajes.Info("Perfil guardado."); Form? ventana = FindForm(); if (ventana != null) ventana.DialogResult = DialogResult.Yes; else Recargar(); } };
             TableLayoutPanel raiz = Tema.ColumnaVertical();
             raiz.Fila(Tema.TituloVista("Mi perfil y apariencia"), false);
             raiz.Fila(_nombre, false); raiz.Fila(Tema.Barra(_foto, elegir, quitar), false);

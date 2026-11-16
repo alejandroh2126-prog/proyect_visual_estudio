@@ -21,20 +21,26 @@ namespace Presentacion
 
             try
             {
+                bool saltarLogin = false;   // true cuando "Mi perfil" guardó cambios: se reconstruye la ventana sin pedir clave
                 while (true)
                 {
-                    fabrica.AsistenteNube.ReiniciarConversacion();
-                    Presentacion.Comun.Tema.Aplicar(null);
-                    using (FormLogin login = new FormLogin(fabrica))
+                    if (!saltarLogin)
                     {
-                        if (login.ShowDialog() != DialogResult.OK) return;
+                        fabrica.AsistenteNube.ReiniciarConversacion();
+                        Presentacion.Comun.Tema.Aplicar(null);
+                        using (FormLogin login = new FormLogin(fabrica))
+                        {
+                            if (login.ShowDialog() != DialogResult.OK) return;
+                        }
                     }
+                    saltarLogin = false;
 
                     Presentacion.Comun.Mensajes.Ejecutar(() => Presentacion.Comun.Tema.Aplicar(fabrica.PerfilCuenta.Obtener()));
                     using (Form principal = Logica.Utilidades.Sesion.UsuarioActual?.Rol == Entidades.RolUsuario.Trabajador
                         ? new FormTrabajador(fabrica) : new FormPrincipal(fabrica))
                     {
                         principal.ShowDialog();
+                        if (principal.DialogResult == DialogResult.Yes) { saltarLogin = true; continue; }   // aplicar colores y foto al instante
                         if (principal.DialogResult != DialogResult.Retry) return;
                     }
                 }
