@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Windows.Forms;
 using Entidades;
 using Logica;
@@ -14,6 +15,7 @@ namespace Presentacion.Vistas
         private readonly DataGridView _vacantes = Tema.Tabla("Empresa", "Cargo", "Ciudad", "Salario", "Descripción");
         private readonly DataGridView _postulaciones = Tema.Tabla("Empresa", "Cargo", "Fecha", "Salario mensual", "Estado");
         private readonly Label _cv = Tema.Etiqueta("");
+        private readonly PictureBox _foto = new PictureBox { Width = 110, Height = 110, SizeMode = PictureBoxSizeMode.Zoom, BackColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
         private readonly TextBox _buscar = new TextBox { Width = 220 };
         public VistaEmpleoTrabajador(FabricaServicios fabrica) : base(fabrica)
         {
@@ -21,6 +23,7 @@ namespace Presentacion.Vistas
             TableLayoutPanel perfil = Tema.ColumnaVertical();
             perfil.Fila(Tema.TituloVista("Mi perfil profesional"), false);
             perfil.Fila(Tema.Etiqueta("La identificación y el teléfono son privados. La hoja de vida puede contener datos personales; comparte solo lo necesario."), false);
+            perfil.Fila(BarraFoto(), false);
             perfil.Fila(Campo("Ciudad *", _ciudad), false); perfil.Fila(Campo("Teléfono privado", _telefono), false);
             perfil.Fila(Campo("Profesión / cargo buscado *", _profesion), false); perfil.Fila(Campo("Experiencia y habilidades", _experiencia), false);
             perfil.Fila(Campo("Tipo de identificación", _tipo), false); perfil.Fila(Campo("Número de identificación (privado)", _numero), false);
@@ -45,6 +48,19 @@ namespace Presentacion.Vistas
             tabs.TabPages.Add(new TabPage("Perfil") { Controls = { scroll } }); tabs.TabPages.Add(new TabPage("Buscar trabajo") { Controls = { ofertas } }); tabs.TabPages.Add(new TabPage("Mis postulaciones") { Controls = { mis } });
             tabs.SelectedIndexChanged += (_, _) => CargarListas(); Controls.Add(tabs);
         }
+        private Control BarraFoto()
+        {
+            Button subir = Tema.Boton("Subir foto", Tema.Verde), quitar = Tema.Boton("Quitar foto", Tema.Rojo);
+            subir.Click += (_, _) => Mensajes.Ejecutar(() => { string? r = ArchivosVista.Elegir(true, false); if (r != null) { Fabrica.Empleos.CambiarMiFoto(r); MostrarFoto(); } });
+            quitar.Click += (_, _) => { if (Mensajes.Confirmar("¿Quitar la foto?")) Mensajes.Ejecutar(() => { Fabrica.Empleos.CambiarMiFoto(null); MostrarFoto(); }); };
+            return Tema.Barra(Tema.Etiqueta("Foto de perfil (fondo blanco)"), _foto, subir, quitar);
+        }
+        private void MostrarFoto()
+        {
+            if (Fabrica.Empleos.ObtenerMiPerfil().Foto == "") { _foto.Image?.Dispose(); _foto.Image = null; }
+            else ArchivosVista.MostrarFoto(_foto, Fabrica.Empleos.RutaMiFoto());
+        }
+        protected override void Dispose(bool disposing) { if (disposing) _foto.Image?.Dispose(); base.Dispose(disposing); }
         private Control BarraIdentificacion(string titulo, bool reverso)
         {
             Button subir = Tema.Boton("Subir", Tema.Verde), ver = Tema.Boton("Ver", Tema.Gris), quitar = Tema.Boton("Quitar", Tema.Rojo);
@@ -61,7 +77,7 @@ namespace Presentacion.Vistas
         private void ActualizarCv() => _cv.Text = Fabrica.Empleos.ObtenerMiPerfil().HojaVida == "" ? "Sin CV" : "CV guardado";
         protected override void Recargar()
         {
-            Mensajes.Ejecutar(() => { PerfilCandidato p = Fabrica.Empleos.ObtenerMiPerfil(); _ciudad.Text = p.Ciudad; _telefono.Text = p.Telefono; _profesion.Text = p.Profesion; _experiencia.Text = p.Experiencia; _tipo.SelectedItem = p.TipoDocumento; _numero.Text = p.NumeroDocumento; _visible.Checked = p.Visible; ActualizarCv(); });
+            Mensajes.Ejecutar(() => { PerfilCandidato p = Fabrica.Empleos.ObtenerMiPerfil(); _ciudad.Text = p.Ciudad; _telefono.Text = p.Telefono; _profesion.Text = p.Profesion; _experiencia.Text = p.Experiencia; _tipo.SelectedItem = p.TipoDocumento; _numero.Text = p.NumeroDocumento; _visible.Checked = p.Visible; ActualizarCv(); MostrarFoto(); });
             CargarListas();
         }
         private void CargarListas()
