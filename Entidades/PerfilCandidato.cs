@@ -12,6 +12,7 @@ namespace Entidades
         public string TipoDocumento { get; set; } = "CC";
         public string NumeroDocumento { get; set; } = "";
         public string HojaVida { get; set; } = "";
+        public string Foto { get; set; } = "";
         public string DocumentoFrente { get; set; } = "";
         public string DocumentoReverso { get; set; } = "";
         public bool Visible { get; set; }
@@ -24,5 +25,6 @@ namespace Entidades
         public string Profesion { get; set; } = "";
         public string Experiencia { get; set; } = "";
         public bool TieneHojaVida { get; set; }
+        public bool TieneFoto { get; set; }
     }
 }

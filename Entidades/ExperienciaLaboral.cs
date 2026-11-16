@@ -13,7 +13,7 @@ namespace Entidades
     }
     public static class MotivosRetiro
     {
-        public static readonly string[] Valores = { "Renuncia voluntaria", "Finalización del contrato", "Mutuo acuerdo", "Terminación por decisión del empleador", "Otro / no especificado" };
+        public static readonly string[] Valores = { "Renuncia voluntaria", "Finalización del contrato", "Mutuo acuerdo", "Terminación por decisión del empleador", "Despido con justa causa", "Despido sin justa causa", "Abandono del cargo", "Terminación en período de prueba", "Jubilación", "Otro / no especificado" };
         public static bool EsValido(string motivo) => Array.IndexOf(Valores, motivo) >= 0;
     }
 }
