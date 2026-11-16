@@ -16,6 +16,12 @@ namespace Logica.Servicios
             return Sesion.IdUsuario;
         }
         public List<ExperienciaLaboral> ListarDeclaradas() { int id = Usuario(); return _repo.Listar().FindAll(e => e.UsuarioId == id); }
+        /// <summary>Experiencia que el propio trabajador declaró. Solo se ve si compartió su perfil; los motivos registrados por otros negocios siguen privados.</summary>
+        public List<ExperienciaLaboral> ListarDeCandidato(int usuarioId)
+        {
+            if (!_empleos.PerfilCompartido(usuarioId)) throw new ReglaDeNegocioException("El perfil ya no está compartido.");
+            return _repo.Listar().FindAll(e => e.UsuarioId == usuarioId);
+        }
         public List<Postulacion> ListarRegistradas() => _empleos.ListarMisPostulaciones().FindAll(p => p.Estado == EstadoPostulacion.Contratada || p.Estado == EstadoPostulacion.Finalizada);
         public void Guardar(ExperienciaLaboral datos)
         {

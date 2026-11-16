@@ -17,6 +17,7 @@ namespace Logica
         public ServicioAutenticacion Autenticacion { get; }
         public ServicioEmprendimientos Emprendimientos { get; }
         public ServicioNomina Nomina { get; }
+        public ServicioIncorporacion Incorporacion { get; }
         public ServicioFinanzas Finanzas { get; }
         public ServicioPresupuestos Presupuestos { get; }
         public ServicioInventario Inventario { get; }
@@ -47,6 +48,7 @@ namespace Logica
             HistorialLaboral = new ServicioHistorialLaboral(new RepositorioExperienciasLaborales(), Empleos);
             Emprendimientos = new ServicioEmprendimientos(emprendimientos, cargos, trabajadores, productos, ventas, movimientos, presupuestos, FichasTrabajador, Empleos);
             Nomina = new ServicioNomina(cargos, trabajadores, emprendimientos, FichasTrabajador);
+            Incorporacion = new ServicioIncorporacion(Empleos, Nomina);
             Inventario = new ServicioInventario(productos, Finanzas);
             Ventas = new ServicioVentas(ventas, productos, Finanzas);
             Facturas = new ServicioFacturas();
