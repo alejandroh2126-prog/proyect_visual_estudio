@@ -64,6 +64,15 @@ namespace Logica.Servicios
             PerfilCandidato p = ObtenerMiPerfil();
             return ArchivosPrivados.Ruta(Ambito(p.UsuarioId), reverso ? p.DocumentoReverso : p.DocumentoFrente);
         }
+        public void CambiarMiFoto(string? origen)
+        {
+            PerfilCandidato p = ObtenerMiPerfil(); string ambito = Ambito(p.UsuarioId); string anterior = p.Foto;
+            string nuevo = origen == null ? "" : ArchivosPrivados.Importar(ambito, origen, true, false);
+            p.Foto = nuevo;
+            try { Guardar(p); } catch { ArchivosPrivados.Borrar(ambito, nuevo); throw; }
+            ArchivosPrivados.Borrar(ambito, anterior);
+        }
+        public string RutaMiFoto() { PerfilCandidato p = ObtenerMiPerfil(); return ArchivosPrivados.Ruta(Ambito(p.UsuarioId), p.Foto); }
         public string RutaMiCv() { PerfilCandidato p = ObtenerMiPerfil(); return ArchivosPrivados.Ruta(Ambito(p.UsuarioId), p.HojaVida); }
         public List<CandidatoPublico> ListarCandidatos()
         {
@@ -74,7 +83,7 @@ namespace Logica.Servicios
                 if (!p.Visible) continue;
                 Usuario? u = _usuarios.ObtenerPorId(p.UsuarioId);
                 if (u == null || u.Rol != RolUsuario.Trabajador) continue;
-                lista.Add(new CandidatoPublico { UsuarioId = u.Id, Nombre = u.Nombre, Ciudad = p.Ciudad, Profesion = p.Profesion, Experiencia = p.Experiencia, TieneHojaVida = p.HojaVida != "" });
+                lista.Add(new CandidatoPublico { UsuarioId = u.Id, Nombre = u.Nombre, Ciudad = p.Ciudad, Profesion = p.Profesion, Experiencia = p.Experiencia, TieneHojaVida = p.HojaVida != "", TieneFoto = p.Foto != "" });
             }
             return lista;
         }
@@ -84,6 +93,24 @@ namespace Logica.Servicios
             PerfilCandidato? p = _perfiles.Listar().Find(x => x.UsuarioId == usuarioId && x.Visible);
             if (p == null || _usuarios.ObtenerPorId(usuarioId)?.Rol != RolUsuario.Trabajador) throw new ReglaDeNegocioException("El perfil ya no está compartido.");
             return ArchivosPrivados.Ruta(Ambito(usuarioId), p.HojaVida);
+        }
+        /// <summary>Solo un emprendedor, y solo si el trabajador autorizó compartir su perfil.</summary>
+        public bool PerfilCompartido(int usuarioId)
+        {
+            Exigir(RolUsuario.Emprendedor);
+            return _perfiles.Listar().Exists(x => x.UsuarioId == usuarioId && x.Visible) && _usuarios.ObtenerPorId(usuarioId)?.Rol == RolUsuario.Trabajador;
+        }
+        public string RutaFotoCandidato(int usuarioId)
+        {
+            if (!PerfilCompartido(usuarioId)) throw new ReglaDeNegocioException("El perfil ya no está compartido.");
+            PerfilCandidato p = _perfiles.Listar().Find(x => x.UsuarioId == usuarioId)!;
+            return ArchivosPrivados.Ruta(Ambito(usuarioId), p.Foto);
+        }
+        public Postulacion ObtenerContratacion(int id)
+        {
+            Postulacion p = PostulacionEmpresa(id);
+            if (p.Estado != EstadoPostulacion.Contratada) throw new ReglaDeNegocioException("Solo se agregan a Nómina las contrataciones activas.");
+            return p;
         }
         public Vacante CrearVacante(int empresaId, string cargo, string ciudad, string descripcion, decimal salario)
         {
