@@ -38,12 +38,17 @@ namespace Logica
             IVentaDao ventas = fabricaDao.CrearVentaDao();
             IMovimientoDao movimientos = fabricaDao.CrearMovimientoDao();
             IPresupuestoDao presupuestos = fabricaDao.CrearPresupuestoDao();
+            IEstadisticaDao estadisticas = fabricaDao.CrearEstadisticaDao();
+
+            // Mantenimiento: el procedimiento sp_sg_limpiar_bitacora borra los registros de bitacora de mas de un año.
+            try { estadisticas.LimpiarBitacora(365); }
+            catch (Exception) { /* es un extra: si falla, el programa sigue funcionando */ }
 
             Autenticacion = new ServicioAutenticacion(usuarios);
-            Finanzas = new ServicioFinanzas(movimientos);
+            Finanzas = new ServicioFinanzas(movimientos, estadisticas);
             Presupuestos = new ServicioPresupuestos(presupuestos, Finanzas);
             Emprendimientos = new ServicioEmprendimientos(emprendimientos, cargos, trabajadores, productos, ventas, movimientos, presupuestos);
-            Nomina = new ServicioNomina(cargos, trabajadores);
+            Nomina = new ServicioNomina(cargos, trabajadores, estadisticas);
             Inventario = new ServicioInventario(productos, Finanzas);
             Ventas = new ServicioVentas(ventas, productos, Finanzas);
             Facturas = new ServicioFacturas();

@@ -122,9 +122,28 @@ namespace Datos.Oracle
             try
             {
                 using (DbConnection conexion = Abrir())
-                using (DbCommand cmd = Comando(conexion, "SELECT COUNT(*) FROM sg_usuario"))
                 {
-                    cmd.ExecuteScalar();
+                    using (DbCommand cmd = Comando(conexion, "SELECT COUNT(*) FROM sg_usuario"))
+                    {
+                        cmd.ExecuteScalar();
+                    }
+
+                    // El programa llama a paquetes y procedimientos PL/SQL: deben estar creados y al dia.
+                    const string sqlPlsql =
+                        "SELECT COUNT(*) FROM (" +
+                        " SELECT object_name FROM user_procedures" +
+                        "  WHERE (object_name = 'PKG_SG_REPORTES' AND procedure_name = 'TOTAL_INGRESOS')" +
+                        "     OR (object_name = 'PKG_SG_NOMINA' AND procedure_name = 'TRABAJADORES_ACTIVOS')" +
+                        " UNION ALL" +
+                        " SELECT object_name FROM user_objects" +
+                        "  WHERE object_name = 'SP_SG_LIMPIAR_BITACORA' AND status = 'VALID')";
+                    using (DbCommand cmd = Comando(conexion, sqlPlsql))
+                    {
+                        if (Convert.ToInt32(cmd.ExecuteScalar()) != 3)
+                            throw new ReglaDeNegocioException(
+                                "Faltan los objetos PL/SQL de SGAPE (funciones, paquetes y procedimientos). " +
+                                "Ejecuta el script sql/sgape_plsql.sql en tu base de datos.");
+                    }
                 }
             }
             catch (OracleException ex)

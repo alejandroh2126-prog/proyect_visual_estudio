@@ -18,9 +18,10 @@ namespace Datos
         public abstract IVentaDao CrearVentaDao();
         public abstract IMovimientoDao CrearMovimientoDao();
         public abstract IPresupuestoDao CrearPresupuestoDao();
+        public abstract IEstadisticaDao CrearEstadisticaDao();
 
         /// <summary>Comprueba que la base de datos esta lista. Lanza ReglaDeNegocioException si no lo esta.</summary>
-       public virtual void Verificar()
+        public virtual void Verificar()
         {
         }
 

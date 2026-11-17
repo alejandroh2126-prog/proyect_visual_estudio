@@ -14,11 +14,13 @@ namespace Logica.Servicios
     {
         private readonly ICargoDao _cargos;
         private readonly ITrabajadorDao _trabajadores;
+        private readonly IEstadisticaDao _estadisticas;
 
-        public ServicioNomina(ICargoDao cargos, ITrabajadorDao trabajadores)
+        public ServicioNomina(ICargoDao cargos, ITrabajadorDao trabajadores, IEstadisticaDao estadisticas)
         {
             _cargos = cargos;
             _trabajadores = trabajadores;
+            _estadisticas = estadisticas;
         }
 
         // ---------------- CARGOS ----------------
@@ -82,16 +84,13 @@ namespace Logica.Servicios
 
         public ResumenNomina CalcularResumen(int emprendimientoId)
         {
+            // Los numeros los calcula Oracle con el paquete pkg_sg_nomina.
             ResumenNomina r = new ResumenNomina();
-            foreach (Trabajador t in ListarTrabajadores(emprendimientoId))
-            {
-                if (!t.EstaActivo) continue;
-                r.TrabajadoresActivos++;
-                r.NominaMensualBruta += t.SalarioMensual;
-                r.TotalDeducciones += t.TotalDeducciones;
-            }
-            r.NominaQuincenal = r.NominaMensualBruta / 2m;
-            r.NominaNeta = r.NominaMensualBruta - r.TotalDeducciones;
+            r.TrabajadoresActivos = _estadisticas.TrabajadoresActivos(emprendimientoId);
+            r.NominaMensualBruta = _estadisticas.NominaMensual(emprendimientoId);
+            r.NominaQuincenal = _estadisticas.NominaQuincenal(emprendimientoId);
+            r.TotalDeducciones = _estadisticas.TotalDeducciones(emprendimientoId);
+            r.NominaNeta = _estadisticas.NominaNeta(emprendimientoId);
             return r;
         }
     }

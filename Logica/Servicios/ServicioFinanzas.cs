@@ -13,10 +13,12 @@ namespace Logica.Servicios
     public class ServicioFinanzas
     {
         private readonly IMovimientoDao _movimientos;
+        private readonly IEstadisticaDao _estadisticas;
 
-        public ServicioFinanzas(IMovimientoDao movimientos)
+        public ServicioFinanzas(IMovimientoDao movimientos, IEstadisticaDao estadisticas)
         {
             _movimientos = movimientos;
+            _estadisticas = estadisticas;
         }
 
         public List<Movimiento> Listar(int emprendimientoId)
@@ -66,12 +68,10 @@ namespace Logica.Servicios
 
         public ResumenFinanciero CalcularResumen(int emprendimientoId)
         {
+            // Los totales los calcula Oracle con el paquete pkg_sg_reportes.
             ResumenFinanciero r = new ResumenFinanciero();
-            foreach (Movimiento m in Listar(emprendimientoId))
-            {
-                if (m.EsIngreso) r.TotalIngresos += m.Monto;
-                else if (m.EsGasto) r.TotalGastos += m.Monto;
-            }
+            r.TotalIngresos = _estadisticas.TotalIngresos(emprendimientoId);
+            r.TotalGastos = _estadisticas.TotalGastos(emprendimientoId);
             return r;
         }
     }

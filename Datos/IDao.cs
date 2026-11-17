@@ -29,6 +29,24 @@ namespace Datos
         int EliminarPorEmprendimiento(int emprendimientoId);
     }
 
+    /// <summary>
+    /// DAO de estadisticas: los numeros los calcula la BASE DE DATOS con sus funciones y paquetes PL/SQL
+    /// (pkg_sg_nomina, pkg_sg_reportes) y el procedimiento sp_sg_limpiar_bitacora.
+    /// </summary>
+    public interface IEstadisticaDao
+    {
+        int TrabajadoresActivos(int emprendimientoId);
+        decimal NominaMensual(int emprendimientoId);
+        decimal NominaQuincenal(int emprendimientoId);
+        decimal TotalDeducciones(int emprendimientoId);
+        decimal NominaNeta(int emprendimientoId);
+        decimal TotalIngresos(int emprendimientoId);
+        decimal TotalGastos(int emprendimientoId);
+
+        /// <summary>Borra de la bitacora los registros con mas de estos dias de antiguedad.</summary>
+        void LimpiarBitacora(int dias);
+    }
+
     public interface IUsuarioDao : IDao<Usuario> { }
     public interface IEmprendimientoDao : IDao<Emprendimiento> { }
     public interface ICargoDao : IDaoDeEmprendimiento<Cargo> { }
