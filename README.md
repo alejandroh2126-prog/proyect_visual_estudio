@@ -59,16 +59,20 @@ Desinstalar la aplicación **no** borra tus datos.
 
 1. Doble clic en `publicar.bat` → crea `Publicado\SGAPE.exe` (incluye .NET; no hay que instalarlo aparte).
 2. Abrir `Instalador\SGAPE.iss` con [Inno Setup](https://jrsoftware.org/isinfo.php) y pulsar **Compile**.
-3. El instalador queda en `Instalador\Salida\`.
+3. El instalador queda en `Instalador\Salida\SGAPE-Instalador.exe` (nombre fijo, versión 1.1.0). Súbelo como archivo de un Release de GitHub para que funcione el botón de descarga del sitio web.
+
+## Pruebas automáticas
+
+`dotnet run --project Pruebas` ejecuta 41 comprobaciones de la lógica (cuentas, archivos, privacidad, empleo, historial y Nómina) en una carpeta temporal, sin tocar tus datos.
 
 ## Perfiles y empleo (prototipo local)
 
-- **Mi perfil:** foto y colores por cuenta; los colores se aplican al volver a iniciar sesión.
+- **Mi perfil:** foto y colores por cuenta; los cambios se aplican al instante al guardar.
 - **Nómina:** tipos de documento, ficha ampliada y archivos privados de empleados.
-- **Empleo:** cuentas de trabajador, perfiles profesionales, hojas de vida PDF, vacantes y postulaciones. Los emprendedores pueden consultar únicamente los perfiles compartidos.
-- **Historial laboral:** ofertas aceptadas, vinculaciones, finalizaciones, motivos privados, solicitudes de corrección y experiencias declaradas.
+- **Empleo:** cuentas de trabajador, perfiles profesionales, hojas de vida PDF, vacantes y postulaciones. El trabajador sube su foto de perfil (fondo blanco). Los emprendedores buscan candidatos, abren su perfil (foto, datos profesionales, experiencia declarada y hoja de vida) y solo ven lo que el trabajador compartió.
+- **Historial laboral:** ofertas aceptadas, vinculaciones, finalizaciones, motivos privados (renuncia, despido con o sin justa causa, abandono, fin de contrato, entre otros), solicitudes de corrección y experiencias declaradas.
 
-Los datos y adjuntos se guardan localmente en `%LOCALAPPDATA%\SGAPE\datos`. Las cuentas antiguas se leen como emprendedoras y los documentos anteriores como CC. Para probar, usa dos cuentas de SGAPE en la **misma cuenta de Windows** y cierra sesión para alternarlas. No existe aún un servidor compartido ni sincronización entre computadores. No uses documentos reales en una demostración; el almacenamiento local no protege contra usuarios con acceso directo al sistema de archivos. No es facturación, nómina ni contratación legal certificada. Las vinculaciones de Empleo no crean automáticamente registros de Nómina: el empleador puede registrar el trabajador manualmente tras aceptar la oferta. No se incluyen fotos ni documentos de ejemplo reales en Git.
+Los datos y adjuntos se guardan localmente en `%LOCALAPPDATA%\SGAPE\datos`. Las cuentas antiguas se leen como emprendedoras y los documentos anteriores como CC. Para probar, usa dos cuentas de SGAPE en la **misma cuenta de Windows** y cierra sesión para alternarlas. No existe aún un servidor compartido ni sincronización entre computadores. No uses documentos reales en una demostración; el almacenamiento local no protege contra usuarios con acceso directo al sistema de archivos. No es facturación, nómina ni contratación legal certificada. Tras aceptar la oferta, el empleador usa **Agregar a Nómina**: el cargo y el salario vienen de la vacante y el número de documento, que es privado, lo escribe el empleador. No se incluyen fotos ni documentos de ejemplo reales en Git.
 
 ## Autores
 
