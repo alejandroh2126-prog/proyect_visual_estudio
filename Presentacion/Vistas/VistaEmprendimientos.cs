@@ -6,76 +6,58 @@ using Logica;
 using Logica.Utilidades;
 using Presentacion.Comun;
 using Presentacion.Dialogos;
-
 namespace Presentacion.Vistas
 {
-    /// <summary>CRUD de emprendimientos: crear, ver, editar y eliminar.</summary>
-    public class VistaEmprendimientos : VistaBase
+    public class VistaEmpleoEmprendedor : VistaBase
     {
-        private readonly DataGridView _tabla = Tema.Tabla("Nombre", "Sector", "Inicio", "Estado", "Descripción");
-
-        public VistaEmprendimientos(FabricaServicios fabrica) : base(fabrica)
+        private readonly DataGridView _vacantes = Tema.Tabla("Cargo", "Ciudad", "Salario", "Estado", "Descripción");
+        private readonly DataGridView _candidatos = Tema.Tabla("Nombre", "Ciudad", "Perfil profesional", "Experiencia", "CV");
+        private readonly DataGridView _historial = Tema.Tabla("Empresa", "Trabajador", "Cargo", "Inicio", "Fin", "Motivo", "Revisión");
+        private readonly DataGridView _postulaciones = Tema.Tabla("Candidato", "Cargo", "Fecha", "Estado", "Motivo / revisión");
+        private readonly TextBox _buscarCand = new TextBox { Width = 220 };
+        public VistaEmpleoEmprendedor(FabricaServicios fabrica) : base(fabrica)
         {
-            Button nuevo = Tema.Boton("Nuevo emprendimiento", Tema.Verde);
-            Button editar = Tema.Boton("Editar", Tema.Gris);
-            Button eliminar = Tema.Boton("Eliminar", Tema.Rojo);
-            nuevo.Click += delegate { Nuevo(); };
-            editar.Click += delegate { Editar(); };
-            eliminar.Click += delegate { Eliminar(); };
-            _tabla.CellDoubleClick += (s, e) => { if (e.RowIndex >= 0) Editar(); };
-
-            TableLayoutPanel raiz = Tema.ColumnaVertical();
-            raiz.Fila(Tema.TituloVista("Mis emprendimientos"), false);
-            raiz.Fila(Tema.Barra(nuevo, editar, eliminar), false);
-            raiz.Fila(_tabla, true);
-            Controls.Add(raiz);
+            Button nueva = Tema.Boton("Publicar vacante", Tema.Verde), cerrar = Tema.Boton("Cerrar vacante", Tema.Gris), ver = Tema.Boton("Ver CV", Tema.Verde), actualizar = Tema.Boton("Actualizar", Tema.Gris), verPost = Tema.Boton("Ver CV del candidato", Tema.Verde);
+            nueva.Click += (_, _) => { if (ExigirEmprendimiento()) Mensajes.Ejecutar(() => { using DialogoVacante d = new DialogoVacante(Fabrica, Emprendimiento!.Id); if (d.ShowDialog(this) == DialogResult.OK) Recargar(); }); };
+            cerrar.Click += (_, _) => Mensajes.Ejecutar(() => { Vacante? v = _vacantes.Seleccionado<Vacante>(); if (v == null) throw new ReglaDeNegocioException("Selecciona una vacante."); if (Mensajes.Confirmar("¿Cerrar esta vacante?")) { Fabrica.Empleos.CerrarVacante(v.Id); Recargar(); } });
+            ver.Click += (_, _) => Mensajes.Ejecutar(() => { CandidatoPublico? c = _candidatos.Seleccionado<CandidatoPublico>(); if (c == null) throw new ReglaDeNegocioException("Selecciona un candidato."); Mensajes.Abrir(Fabrica.Empleos.RutaCvCandidato(c.UsuarioId)); });
+            actualizar.Click += (_, _) => Recargar();
+            Button verPerfil = Tema.Boton("Ver perfil", Tema.VerdeOscuro);
+            verPerfil.Click += (_, _) => Mensajes.Ejecutar(() => { CandidatoPublico? c = _candidatos.Seleccionado<CandidatoPublico>(); if (c == null) throw new ReglaDeNegocioException("Selecciona un candidato."); MostrarPerfil(c); });
+            _candidatos.CellDoubleClick += (_, e) => { if (e.RowIndex >= 0) verPerfil.PerformClick(); };
+            _buscarCand.TextChanged += (_, _) => Recargar();
+            Button verPerfilPost = Tema.Boton("Ver perfil", Tema.VerdeOscuro), agregarNomina = Tema.Boton("Agregar a Nómina", Tema.VerdeOscuro);
+            verPerfilPost.Click += (_, _) => Mensajes.Ejecutar(() => { Postulacion p = Seleccion(); CandidatoPublico? c = Fabrica.Empleos.ListarCandidatos().Find(x => x.UsuarioId == p.TrabajadorUsuarioId); if (c == null) throw new ReglaDeNegocioException("El trabajador no comparte su perfil."); MostrarPerfil(c); });
+            agregarNomina.Click += (_, _) => Mensajes.Ejecutar(() => { Postulacion p = Seleccion(); if (p.Estado != EstadoPostulacion.Contratada) throw new ReglaDeNegocioException("Solo las contrataciones activas se agregan a Nómina."); using DialogoIncorporar d = new DialogoIncorporar(Fabrica, p); if (d.ShowDialog(this) == DialogResult.OK) Mensajes.Info("Trabajador agregado a Nómina."); });
+            verPost.Click += (_, _) => Mensajes.Ejecutar(() => { Postulacion p = Seleccion(); Mensajes.Abrir(Fabrica.Empleos.RutaCvCandidato(p.TrabajadorUsuarioId)); });
+            Button ofertar = Tema.Boton("Ofertar contratación", Tema.Verde), rechazar = Tema.Boton("Rechazar", Tema.Rojo), finalizar = Tema.Boton("Finalizar vínculo", Tema.Gris), revision = Tema.Boton("Revisar solicitud", Tema.Gris);
+            ofertar.Click += (_, _) => Mensajes.Ejecutar(() => { Postulacion p = Seleccion(); if (Mensajes.Confirmar("¿Enviar una propuesta de contratación?")) { Fabrica.Empleos.Ofertar(p.Id); Recargar(); } });
+            rechazar.Click += (_, _) => Mensajes.Ejecutar(() => { Postulacion p = Seleccion(); if (Mensajes.Confirmar("¿Rechazar esta postulación?")) { Fabrica.Empleos.Rechazar(p.Id); Recargar(); } });
+            finalizar.Click += (_, _) => Mensajes.Ejecutar(() => { using DialogoFinalizarEmpleo d = new DialogoFinalizarEmpleo(Fabrica, Seleccion()); if (d.ShowDialog(this) == DialogResult.OK) Recargar(); });
+            revision.Click += (_, _) => Mensajes.Ejecutar(() => { using DialogoResolverRevision d = new DialogoResolverRevision(Fabrica, Seleccion()); if (d.ShowDialog(this) == DialogResult.OK) Recargar(); });
+            TabControl tabs = new TabControl { Dock = DockStyle.Fill };
+            tabs.TabPages.Add(Pagina("Vacantes", _vacantes, nueva, cerrar)); tabs.TabPages.Add(Pagina("Buscar trabajadores", _candidatos, Tema.Etiqueta("Buscar:"), _buscarCand, verPerfil, ver, actualizar)); tabs.TabPages.Add(Pagina("Postulaciones", _postulaciones, verPerfilPost, verPost, ofertar, rechazar, agregarNomina, finalizar, revision));
+            Button revisarHistorico = Tema.Boton("Revisar solicitud", Tema.Gris);
+            revisarHistorico.Click += (_, _) => Mensajes.Ejecutar(() => { Postulacion? p = _historial.Seleccionado<Postulacion>(); if (p == null) throw new ReglaDeNegocioException("Selecciona una vinculación finalizada."); using DialogoResolverRevision d = new DialogoResolverRevision(Fabrica, p); if (d.ShowDialog(this) == DialogResult.OK) Recargar(); });
+            tabs.TabPages.Add(Pagina("Historial de mis empresas", _historial, revisarHistorico));
+            tabs.SelectedIndexChanged += (_, _) => Recargar(); Controls.Add(tabs);
         }
-
+        private static TabPage Pagina(string titulo, DataGridView tabla, params Control[] botones) { TableLayoutPanel p = Tema.ColumnaVertical(); p.Fila(Tema.Barra(botones), false); p.Fila(tabla, true); TabPage t = new TabPage(titulo); t.Controls.Add(p); return t; }
+        private void MostrarPerfil(CandidatoPublico c) { using DialogoPerfilCandidato d = new DialogoPerfilCandidato(Fabrica, c); d.ShowDialog(this); }
+        private Postulacion Seleccion() => _postulaciones.Seleccionado<Postulacion>() ?? throw new ReglaDeNegocioException("Selecciona una postulación.");
         protected override void Recargar()
         {
-            _tabla.Rows.Clear();
-            Mensajes.Ejecutar(delegate
+            Mensajes.Ejecutar(() =>
             {
-                foreach (Emprendimiento e in Fabrica.Emprendimientos.ListarDelUsuario())
-                {
-                    DataGridViewRow fila = _tabla.AgregarFila(e, e.Nombre, e.Sector, Formato.Fecha(e.FechaInicio),
-                        e.Estado, e.Descripcion);
-                    if (e.Estado == Estados.Inactivo) fila.DefaultCellStyle.ForeColor = Tema.TextoSuave;
-                }
+                _vacantes.Rows.Clear(); _candidatos.Rows.Clear(); _postulaciones.Rows.Clear();
+                List<CandidatoPublico> candidatos = Fabrica.Empleos.ListarCandidatos();
+                foreach (CandidatoPublico c in candidatos) if (Formato.Contiene(c.Nombre + " " + c.Ciudad + " " + c.Profesion + " " + c.Experiencia, _buscarCand.Text)) _candidatos.AgregarFila(c, c.Nombre, c.Ciudad, c.Profesion, c.Experiencia, c.TieneHojaVida ? "Sí" : "No");
+                _historial.Rows.Clear();
+                foreach (Postulacion p in Fabrica.Empleos.ListarHistorialEmprendedor()) _historial.AgregarFila(p, p.Empresa, p.NombreTrabajador, p.Cargo, p.InicioLaboral.HasValue ? Formato.Fecha(p.InicioLaboral.Value) : "—", p.FinLaboral.HasValue ? Formato.Fecha(p.FinLaboral.Value) : "—", p.MotivoRetiro, p.SolicitudRevision == "" ? "—" : p.RespuestaRevision == "" ? "Pendiente" : p.RespuestaRevision);
+                if (Emprendimiento == null) return;
+                foreach (Vacante v in Fabrica.Empleos.ListarVacantesPropias(Emprendimiento.Id)) _vacantes.AgregarFila(v, v.Cargo, v.Ciudad, v.Salario == 0 ? "A convenir" : Formato.Moneda(v.Salario), v.Abierta ? "Abierta" : "Cerrada", v.Descripcion);
+                foreach (Postulacion p in Fabrica.Empleos.ListarPostulacionesEmpresa(Emprendimiento.Id)) _postulaciones.AgregarFila(p, (p.Estado == EstadoPostulacion.Contratada || p.Estado == EstadoPostulacion.Finalizada) && p.NombreTrabajador != "" ? p.NombreTrabajador : candidatos.Find(c => c.UsuarioId == p.TrabajadorUsuarioId)?.Nombre ?? "Perfil no compartido", p.Cargo, Formato.Fecha(p.Fecha), p.Estado, p.MotivoRetiro + (p.SolicitudRevision != "" ? " · " + (p.RespuestaRevision == "" ? "Revisión pendiente" : p.RespuestaRevision) : ""));
             });
-        }
-
-        private void Nuevo()
-        {
-            using (DialogoEmprendimiento d = new DialogoEmprendimiento(Fabrica, null))
-            {
-                if (d.ShowDialog(this) == DialogResult.OK) Cambio();
-            }
-        }
-
-        private void Editar()
-        {
-            Emprendimiento? e = _tabla.Seleccionado<Emprendimiento>();
-            if (e == null) { Mensajes.Info("Selecciona un emprendimiento de la lista."); return; }
-            using (DialogoEmprendimiento d = new DialogoEmprendimiento(Fabrica, e))
-            {
-                if (d.ShowDialog(this) == DialogResult.OK) Cambio();
-            }
-        }
-
-        private void Eliminar()
-        {
-            Emprendimiento? e = _tabla.Seleccionado<Emprendimiento>();
-            if (e == null) { Mensajes.Info("Selecciona un emprendimiento de la lista."); return; }
-            if (!Mensajes.Confirmar("¿Eliminar '" + e.Nombre + "' y TODOS sus datos (trabajadores, inventario, ventas y movimientos)?\nEsta acción no se puede deshacer."))
-                return;
-            if (Mensajes.Ejecutar(delegate { Fabrica.Emprendimientos.Eliminar(e.Id); })) Cambio();
-        }
-
-        private void Cambio()
-        {
-            Recargar();
-            NotificarCambio();
         }
     }
 }
