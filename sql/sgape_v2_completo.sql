@@ -110,9 +110,23 @@ CREATE TABLE sg_usuario (
     email           VARCHAR2(150) NOT NULL,
     clave_hash      VARCHAR2(500) NOT NULL,   -- PBKDF2 + sal (la clave nunca se guarda en texto)
     fecha_registro  DATE DEFAULT SYSDATE NOT NULL,
+    plan_tipo       VARCHAR2(10)  DEFAULT 'GRATIS' NOT NULL,   -- modelo freemium: GRATIS o PRO
+    plan_vence      DATE,                                       -- hasta cuando dura Pro
     CONSTRAINT pk_sg_usuario PRIMARY KEY (id),
+    CONSTRAINT ck_sg_usuario_plan CHECK (plan_tipo IN ('GRATIS', 'PRO')),
     CONSTRAINT uq_sg_usuario_email UNIQUE (email),
     CONSTRAINT ck_sg_usuario_email CHECK (REGEXP_LIKE(email, '^[^@ ]+@[^@ ]+\.[a-z]{2,}$'))
+);
+
+-- Codigos que activan el plan Pro (los crea el administrador con sp_sg_generar_codigos)
+CREATE TABLE sg_codigo_activacion (
+    codigo      VARCHAR2(20) CONSTRAINT pk_sg_codigo_activacion PRIMARY KEY,
+    dias        NUMBER(4)    NOT NULL,
+    creado      DATE DEFAULT SYSDATE NOT NULL,
+    usuario_id  NUMBER(10),
+    usado_en    DATE,
+    CONSTRAINT ck_sg_codigo_dias CHECK (dias BETWEEN 1 AND 3660),
+    CONSTRAINT fk_sg_codigo_usuario FOREIGN KEY (usuario_id) REFERENCES sg_usuario (id) ON DELETE SET NULL
 );
 
 CREATE TABLE sg_emprendimiento (
@@ -1658,6 +1672,21 @@ COMMIT;
    los procedimientos y los disparadores)
    ===================================================================== */
 
+-- 3.0 Plan vigente del usuario (modelo de negocio): 'PRO' si no ha vencido, si no 'GRATIS'
+CREATE OR REPLACE FUNCTION fn_sg_plan_vigente (p_usuario_id IN NUMBER) RETURN VARCHAR2 IS
+    v_tipo  sg_usuario.plan_tipo%TYPE;
+    v_vence sg_usuario.plan_vence%TYPE;
+BEGIN
+    SELECT plan_tipo, plan_vence INTO v_tipo, v_vence FROM sg_usuario WHERE id = p_usuario_id;
+    IF v_tipo = 'PRO' AND (v_vence IS NULL OR v_vence >= TRUNC(SYSDATE)) THEN
+        RETURN 'PRO';
+    END IF;
+    RETURN 'GRATIS';
+EXCEPTION
+    WHEN NO_DATA_FOUND THEN RETURN 'GRATIS';
+END fn_sg_plan_vigente;
+/
+
 -- 3.1 Deducciones de nomina: 4 % salud + 4 % pension
 CREATE OR REPLACE FUNCTION fn_sg_deducciones (
   p_salario IN NUMBER
@@ -2620,6 +2649,56 @@ BEGIN
 END sp_sg_config_guardar;
 /
 
+-- Planes: canjear un codigo de activacion (la aplicacion, seccion Mi plan)
+CREATE OR REPLACE PROCEDURE sp_sg_canjear_codigo (
+    p_usuario_id IN NUMBER,
+    p_codigo     IN VARCHAR2
+) AS
+    v_codigo sg_codigo_activacion.codigo%TYPE := UPPER(TRIM(p_codigo));
+    v_dias   sg_codigo_activacion.dias%TYPE;
+    v_usado  sg_codigo_activacion.usuario_id%TYPE;
+BEGIN
+    BEGIN
+        SELECT dias, usuario_id INTO v_dias, v_usado
+          FROM sg_codigo_activacion WHERE codigo = v_codigo
+           FOR UPDATE;   -- dos personas no pueden usar el mismo codigo a la vez
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20080, 'El código no es válido. Revísalo e inténtalo de nuevo.');
+    END;
+    IF v_usado IS NOT NULL THEN
+        RAISE_APPLICATION_ERROR(-20081, 'Ese código ya fue usado.');
+    END IF;
+
+    UPDATE sg_codigo_activacion SET usuario_id = p_usuario_id, usado_en = SYSDATE WHERE codigo = v_codigo;
+    -- Si ya era Pro, los dias se suman a lo que le quedaba
+    UPDATE sg_usuario
+       SET plan_tipo  = 'PRO',
+           plan_vence = GREATEST(NVL(plan_vence, TRUNC(SYSDATE)), TRUNC(SYSDATE)) + v_dias
+     WHERE id = p_usuario_id;
+    IF SQL%ROWCOUNT = 0 THEN
+        RAISE_APPLICATION_ERROR(-20083, 'Usuario no encontrado.');
+    END IF;
+    COMMIT;
+END sp_sg_canjear_codigo;
+/
+
+-- Planes: el administrador genera codigos de activacion (EXEC sp_sg_generar_codigos(5, 30);)
+CREATE OR REPLACE PROCEDURE sp_sg_generar_codigos (
+    p_cantidad IN NUMBER DEFAULT 5,
+    p_dias     IN NUMBER DEFAULT 30
+) AS
+    v_codigo VARCHAR2(20);
+BEGIN
+    FOR i IN 1 .. LEAST(NVL(p_cantidad, 5), 100) LOOP
+        v_codigo := 'PRO-' || DBMS_RANDOM.STRING('X', 4) || '-' || DBMS_RANDOM.STRING('X', 4);
+        INSERT INTO sg_codigo_activacion (codigo, dias) VALUES (v_codigo, p_dias);
+        DBMS_OUTPUT.PUT_LINE(v_codigo || '   (' || p_dias || ' días de Pro)');
+    END LOOP;
+    COMMIT;
+END sp_sg_generar_codigos;
+/
+
 
 /* =====================================================================
    PARTE 6. DISPARADORES (se ejecutan solos con cada INSERT/UPDATE/DELETE
@@ -2700,6 +2779,35 @@ BEGIN
   :NEW.email  := LOWER(TRIM(:NEW.email));
   :NEW.nombre := TRIM(:NEW.nombre);
 END trg_sg_usuario_email;
+/
+
+-- 6.5b Planes: 14 dias de Pro de prueba al registrarse
+CREATE OR REPLACE TRIGGER trg_sg_usuario_plan
+BEFORE INSERT ON sg_usuario
+FOR EACH ROW
+BEGIN
+    IF :NEW.plan_vence IS NULL THEN
+        :NEW.plan_tipo  := 'PRO';
+        :NEW.plan_vence := TRUNC(SYSDATE) + 14;
+    END IF;
+END;
+/
+
+-- 6.5c Planes: el plan Gratis tiene un solo emprendimiento (ultima barrera, aunque se salten la aplicacion)
+CREATE OR REPLACE TRIGGER trg_sg_emprendimiento_plan
+BEFORE INSERT ON sg_emprendimiento
+FOR EACH ROW
+DECLARE
+    v_total NUMBER;
+BEGIN
+    IF fn_sg_plan_vigente(:NEW.usuario_id) = 'GRATIS' THEN
+        SELECT COUNT(*) INTO v_total FROM sg_emprendimiento WHERE usuario_id = :NEW.usuario_id;
+        IF v_total >= 1 THEN
+            RAISE_APPLICATION_ERROR(-20082,
+                'El plan Gratis permite 1 emprendimiento. Pasa a Pro en la sección Mi plan para crear más.');
+        END IF;
+    END IF;
+END;
 /
 
 -- 6.6 Trabajador: documento valido segun su tipo y cargo del MISMO emprendimiento

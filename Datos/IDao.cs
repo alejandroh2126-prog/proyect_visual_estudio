@@ -15,6 +15,12 @@ namespace Datos
         Usuario? ObtenerPorEmail(string email);
         Usuario? ObtenerPorId(int id);
         Usuario Insertar(Usuario usuario);
+
+        /// <summary>fn_sg_plan_vigente: true si el usuario tiene Pro sin vencer.</summary>
+        bool EsPro(int usuarioId);
+
+        /// <summary>sp_sg_canjear_codigo: activa (o extiende) Pro con un codigo.</summary>
+        void CanjearCodigo(int usuarioId, string codigo);
     }
 
     /// <summary>Catalogos (diccionarios de datos). Solo lectura.</summary>

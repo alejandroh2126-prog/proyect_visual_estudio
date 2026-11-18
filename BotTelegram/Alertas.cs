@@ -79,10 +79,16 @@ namespace BotTelegram
                 return;
             }
 
+            Dictionary<int, bool> pro = new Dictionary<int, bool>();
             foreach (ChatAlerta chat in chats)
             {
                 try
                 {
+                    // Las alertas son del plan Pro: a una cuenta Gratis no se le envia nada
+                    if (!pro.TryGetValue(chat.UsuarioId, out bool esPro))
+                        pro[chat.UsuarioId] = esPro = _s.Planes.EsPro(chat.UsuarioId);
+                    if (!esPro) continue;
+
                     await StockBajo(chat, ct);
                     await Presupuestos(chat, ct);
                     await HojasDeVida(chat, ct);

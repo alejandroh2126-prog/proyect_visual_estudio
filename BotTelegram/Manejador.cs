@@ -162,7 +162,7 @@ namespace BotTelegram
             }
 
             // A partir de aqui se necesita una cuenta vinculada
-            ContextoChat? ctx = Contexto(chatId);
+            ContextoChat? ctx = Contexto(chatId, comando != "/desvincular");
             if (ctx == null)
             {
                 await _tg.EnviarMensaje(chatId,
@@ -215,10 +215,15 @@ namespace BotTelegram
             }
         }
 
-        private ContextoChat? Contexto(long chatId)
+        private ContextoChat? Contexto(long chatId, bool exigirPro = true)
         {
             int? usuario = _s.Telegram.UsuarioDeChat(chatId);
             if (usuario == null) return null;
+            // Modelo de negocio: el bot del dueño es del plan Pro (los aspirantes a vacantes no necesitan nada)
+            if (exigirPro && !_s.Planes.EsPro(usuario.Value))
+                throw new ReglaDeNegocioException(
+                    "El bot de SGAPE es parte del plan Pro y tu cuenta está en el plan Gratis.\n\n" +
+                    "Actívalo en la aplicación, sección Mi plan, y vuelve a escribirme. Tus datos siguen guardados.");
             int? emp = _s.Telegram.EmprendimientoDeChat(chatId);
             if (emp == null)
                 throw new ReglaDeNegocioException("Tu cuenta no tiene emprendimientos activos. Crea uno en la aplicación y escribe /emprendimientos.");

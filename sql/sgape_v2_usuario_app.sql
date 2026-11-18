@@ -45,7 +45,8 @@ DECLARE
   END;
 BEGIN
   -- Tablas de SGAPE: leer y escribir datos (no alterar ni borrar la tabla)
-  FOR t IN (SELECT table_name FROM user_tables WHERE table_name LIKE 'SG\_%' ESCAPE '\') LOOP
+  FOR t IN (SELECT table_name FROM user_tables WHERE table_name LIKE 'SG\_%' ESCAPE '\'
+                AND table_name <> 'SG_CODIGO_ACTIVACION') LOOP   -- los codigos solo se canjean con el procedimiento
     dar('SELECT, INSERT, UPDATE, DELETE', t.table_name);
     v_n := v_n + 1;
   END LOOP;
@@ -58,7 +59,8 @@ BEGIN
   FOR o IN (SELECT object_name FROM user_objects
              WHERE object_type IN ('PACKAGE', 'PROCEDURE', 'FUNCTION')
                AND (object_name LIKE 'PKG\_SG\_%' ESCAPE '\' OR object_name LIKE 'SP\_SG\_%' ESCAPE '\'
-                    OR object_name LIKE 'FN\_SG\_%' ESCAPE '\')) LOOP
+                    OR object_name LIKE 'FN\_SG\_%' ESCAPE '\')
+               AND object_name <> 'SP_SG_GENERAR_CODIGOS') LOOP   -- crear codigos Pro es solo del administrador
     dar('EXECUTE', o.object_name);
     v_n := v_n + 1;
   END LOOP;

@@ -48,6 +48,7 @@ BEGIN
   BEGIN
     dar('SELECT', 'SG_CONFIGURACION');
     dar('EXECUTE', 'SP_SG_CONFIG_GUARDAR');   -- el bot copia su GROQ_API_KEY a Oracle para la aplicacion
+    dar('EXECUTE', 'FN_SG_PLAN_VIGENTE');     -- el bot del dueño es del plan Pro
   EXCEPTION WHEN OTHERS THEN
     DBMS_OUTPUT.PUT_LINE('Aviso: falta sgape_v2_configuracion.sql (tabla sg_configuracion)');
   END;

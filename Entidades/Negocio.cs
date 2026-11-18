@@ -39,6 +39,42 @@ namespace Entidades
         public string Email { get; set; } = string.Empty;
         public string ClaveHash { get; set; } = string.Empty;
         public DateTime FechaRegistro { get; set; } = DateTime.Today;
+
+        /// <summary>GRATIS o PRO (ver <see cref="Planes"/>). Pro vence en <see cref="PlanVence"/>.</summary>
+        public string PlanTipo { get; set; } = Planes.Gratis;
+        public DateTime? PlanVence { get; set; }
+
+        /// <summary>Pro y sin vencer (la misma regla que fn_sg_plan_vigente en Oracle).</summary>
+        public bool EsPro
+        {
+            get { return PlanTipo == Planes.Pro && (PlanVence == null || PlanVence.Value.Date >= DateTime.Today); }
+        }
+
+        /// <summary>Dias de Pro que le quedan (0 si es Gratis o ya vencio).</summary>
+        public int DiasPro
+        {
+            get { return EsPro && PlanVence != null ? (PlanVence.Value.Date - DateTime.Today).Days + 1 : 0; }
+        }
+    }
+
+    /// <summary>Modelo de negocio freemium: que trae cada plan.</summary>
+    public static class Planes
+    {
+        public const string Gratis = "GRATIS";
+        public const string Pro = "PRO";
+        public const int DiasPrueba = 14;
+        public const decimal PrecioProMensual = 29900m;
+
+        public static readonly string[] IncluyeGratis =
+        {
+            "1 emprendimiento", "Inventario y ventas", "Finanzas y presupuestos"
+        };
+
+        public static readonly string[] IncluyePro =
+        {
+            "Emprendimientos ilimitados", "Asistente con IA", "Bot y alertas en Telegram",
+            "Nómina y vacantes", "Reportes en PDF"
+        };
     }
 
     /// <summary>Negocio de un usuario. El sector y la ciudad son llaves a los catalogos.</summary>

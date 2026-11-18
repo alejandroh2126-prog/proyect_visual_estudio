@@ -23,6 +23,7 @@ namespace Logica
         public ServicioReportes Reportes { get; }
         public ServicioTelegram Telegram { get; }
         public ServicioConfiguracion Configuracion { get; }
+        public ServicioPlanes Planes { get; }
 
         private readonly IReporteDao _reportes;
 
@@ -40,17 +41,19 @@ namespace Logica
             ICargoDao cargos = fabricaDao.CrearCargoDao();
             _reportes = fabricaDao.CrearReporteDao();
 
-            Autenticacion = new ServicioAutenticacion(fabricaDao.CrearUsuarioDao());
+            IUsuarioDao usuarios = fabricaDao.CrearUsuarioDao();
+            Planes = new ServicioPlanes(usuarios);
+            Autenticacion = new ServicioAutenticacion(usuarios);
             Catalogos = new ServicioCatalogos(fabricaDao.CrearCatalogoDao(), productos);
-            Emprendimientos = new ServicioEmprendimientos(fabricaDao.CrearEmprendimientoDao(), _reportes);
+            Emprendimientos = new ServicioEmprendimientos(fabricaDao.CrearEmprendimientoDao(), _reportes, Planes);
             Nomina = new ServicioNomina(cargos, fabricaDao.CrearTrabajadorDao(), _reportes, Catalogos);
             Inventario = new ServicioInventario(productos);
             Ventas = new ServicioVentas(fabricaDao.CrearVentaDao(), productos, _reportes);
             Finanzas = new ServicioFinanzas(fabricaDao.CrearMovimientoDao(), _reportes, Catalogos);
             Presupuestos = new ServicioPresupuestos(fabricaDao.CrearPresupuestoDao(), Catalogos);
             Vacantes = new ServicioVacantes(fabricaDao.CrearVacanteDao(), fabricaDao.CrearPostulacionDao(), cargos, Catalogos);
-            Reportes = new ServicioReportes(_reportes, Ventas, Inventario, Presupuestos);
-            Telegram = new ServicioTelegram(fabricaDao.CrearTelegramDao());
+            Reportes = new ServicioReportes(_reportes, Ventas, Inventario, Presupuestos, Planes);
+            Telegram = new ServicioTelegram(fabricaDao.CrearTelegramDao(), Planes);
             Configuracion = new ServicioConfiguracion(fabricaDao.CrearConfiguracionDao());
         }
 

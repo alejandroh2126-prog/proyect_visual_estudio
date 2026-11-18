@@ -34,6 +34,13 @@
                                    Visibility="{Binding SinEmprendimientos, Converter={StaticResource BoolAVisible}}" />
                     </StackPanel>
                     <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
+                        <Button Command="{Binding VerPlanCommand}" ToolTip="Ver mi plan" Margin="0,0,16,0" Padding="12,2" Height="28"
+                                Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="White" BorderBrush="White">
+                            <StackPanel Orientation="Horizontal">
+                                <md:PackIcon Kind="CrownOutline" VerticalAlignment="Center" />
+                                <TextBlock Text="{Binding TextoPlan}" Margin="6,0,0,0" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
                         <md:PackIcon Kind="AccountCircle" Width="24" Height="24" VerticalAlignment="Center" />
                         <TextBlock Text="{Binding NombreUsuario}" Margin="6,0,16,0" VerticalAlignment="Center" />
                         <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Command="{Binding CerrarSesionCommand}" ToolTip="Cerrar sesión">
@@ -54,6 +61,8 @@
                             <StackPanel Orientation="Horizontal" Margin="8,6">
                                 <md:PackIcon Kind="{Binding Icono}" Width="22" Height="22" VerticalAlignment="Center" />
                                 <TextBlock Text="{Binding Nombre}" FontSize="15" Margin="14,0,0,0" VerticalAlignment="Center" />
+                                <md:PackIcon Kind="LockOutline" Width="16" Height="16" Margin="8,0,0,0" VerticalAlignment="Center" Opacity="0.6"
+                                             ToolTip="Plan Pro" Visibility="{Binding Bloqueada, Converter={StaticResource BoolAVisible}}" />
                             </StackPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>

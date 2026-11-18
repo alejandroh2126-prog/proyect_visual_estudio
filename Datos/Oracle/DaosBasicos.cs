@@ -11,7 +11,7 @@ namespace Datos.Oracle
 
     public class UsuarioDaoOracle : IUsuarioDao
     {
-        private const string Sql = "SELECT id, nombre, email, clave_hash, fecha_registro FROM sg_usuario";
+        private const string Sql = "SELECT id, nombre, email, clave_hash, fecha_registro, plan_tipo, plan_vence FROM sg_usuario";
 
         private static Usuario Mapear(OracleDataReader r)
         {
@@ -21,7 +21,9 @@ namespace Datos.Oracle
                 Nombre = Txt(r, "nombre"),
                 Email = Txt(r, "email"),
                 ClaveHash = Txt(r, "clave_hash"),
-                FechaRegistro = Fec(r, "fecha_registro")
+                FechaRegistro = Fec(r, "fecha_registro"),
+                PlanTipo = Txt(r, "plan_tipo"),
+                PlanVence = FecNula(r, "plan_vence")
             };
         }
 
@@ -47,6 +49,18 @@ namespace Datos.Oracle
                     Fecha(c, "fecha", u.FechaRegistro);
                 });
             return u;
+        }
+
+        public bool EsPro(int usuarioId)
+        {
+            return Valor("SELECT CASE WHEN fn_sg_plan_vigente(:p_id) = 'PRO' THEN 1 ELSE 0 END FROM dual",
+                         c => Entero(c, "id", usuarioId)) == 1m;
+        }
+
+        public void CanjearCodigo(int usuarioId, string codigo)
+        {
+            EjecutarSql("BEGIN sp_sg_canjear_codigo(:p_usuario, :p_codigo); END;",
+                        c => { Entero(c, "usuario", usuarioId); Texto(c, "codigo", codigo); });
         }
     }
 

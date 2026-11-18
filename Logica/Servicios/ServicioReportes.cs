@@ -16,9 +16,12 @@ namespace Logica.Servicios
         private readonly ServicioVentas _ventas;
         private readonly ServicioInventario _inventario;
         private readonly ServicioPresupuestos _presupuestos;
+        private readonly ServicioPlanes _planes;
 
-        public ServicioReportes(IReporteDao reportes, ServicioVentas ventas, ServicioInventario inventario, ServicioPresupuestos presupuestos)
+        public ServicioReportes(IReporteDao reportes, ServicioVentas ventas, ServicioInventario inventario,
+                                ServicioPresupuestos presupuestos, ServicioPlanes planes)
         {
+            _planes = planes;
             _reportes = reportes;
             _ventas = ventas;
             _inventario = inventario;
@@ -71,6 +74,7 @@ namespace Logica.Servicios
 
         public byte[] ReportePdf(Emprendimiento emprendimiento)
         {
+            _planes.ExigirPro(emprendimiento.UsuarioId, "El reporte en PDF");
             return DocumentoReporte.Generar(Reunir(emprendimiento));
         }
 

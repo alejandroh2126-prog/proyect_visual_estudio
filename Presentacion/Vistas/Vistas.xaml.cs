@@ -30,4 +30,5 @@ namespace Presentacion.Vistas
     public partial class PresupuestosView : UserControl { public PresupuestosView() { InitializeComponent(); } }
     public partial class ReportesView : UserControl { public ReportesView() { InitializeComponent(); } }
     public partial class TelegramView : UserControl { public TelegramView() { InitializeComponent(); } }
+    public partial class MiPlanView : UserControl { public MiPlanView() { InitializeComponent(); } }
 }

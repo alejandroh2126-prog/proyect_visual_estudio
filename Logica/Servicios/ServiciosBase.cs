@@ -177,11 +177,13 @@ namespace Logica.Servicios
     {
         private readonly IEmprendimientoDao _emprendimientos;
         private readonly IReporteDao _reportes;
+        private readonly ServicioPlanes _planes;
 
-        public ServicioEmprendimientos(IEmprendimientoDao emprendimientos, IReporteDao reportes)
+        public ServicioEmprendimientos(IEmprendimientoDao emprendimientos, IReporteDao reportes, ServicioPlanes planes)
         {
             _emprendimientos = emprendimientos;
             _reportes = reportes;
+            _planes = planes;
         }
 
         public List<Emprendimiento> Listar(int usuarioId)
@@ -213,9 +215,14 @@ namespace Logica.Servicios
             if (e.Estado != Estados.Activo && e.Estado != Estados.Inactivo)
                 throw new ReglaDeNegocioException("El estado debe ser activo o inactivo.");
 
-            foreach (Emprendimiento otro in _emprendimientos.ListarPorUsuario(usuarioId))
+            List<Emprendimiento> propios = _emprendimientos.ListarPorUsuario(usuarioId);
+            foreach (Emprendimiento otro in propios)
                 if (otro.Id != e.Id && string.Equals(otro.Nombre, e.Nombre, StringComparison.OrdinalIgnoreCase))
                     throw new ReglaDeNegocioException("Ya tienes un emprendimiento con ese nombre.");
+
+            // Plan Gratis: un solo emprendimiento (Oracle lo vuelve a revisar con trg_sg_emprendimiento_plan)
+            if (e.Id == 0 && propios.Count >= 1 && !_planes.EsPro(usuarioId))
+                throw new ReglaDeNegocioException("El plan Gratis permite 1 emprendimiento. Pasa a Pro en la sección Mi plan para crear más.");
 
             if (e.Id == 0)
             {
@@ -271,17 +278,65 @@ namespace Logica.Servicios
         }
     }
 
+    /// <summary>
+    /// UNA SOLA MISION: el modelo de negocio (planes Gratis / Pro).
+    /// Oracle tiene la misma regla (fn_sg_plan_vigente y trg_sg_emprendimiento_plan): aunque alguien se
+    /// salte la aplicacion, la base de datos no deja crear un 2.o emprendimiento en plan Gratis.
+    /// </summary>
+    public class ServicioPlanes
+    {
+        private readonly IUsuarioDao _usuarios;
+
+        public ServicioPlanes(IUsuarioDao usuarios)
+        {
+            _usuarios = usuarios;
+        }
+
+        public Usuario Actual(int usuarioId)
+        {
+            return _usuarios.ObtenerPorId(usuarioId) ?? throw new ReglaDeNegocioException("Usuario no encontrado.");
+        }
+
+        public bool EsPro(int usuarioId)
+        {
+            return _usuarios.EsPro(usuarioId);
+        }
+
+        /// <summary>Lanza el aviso "es del plan Pro" si el usuario esta en Gratis.</summary>
+        public void ExigirPro(int usuarioId, string funcion)
+        {
+            if (!EsPro(usuarioId))
+                throw new ReglaDeNegocioException(funcion + " es parte del plan Pro. Actívalo en la sección Mi plan.");
+        }
+
+        /// <summary>Activa o extiende Pro con un codigo PRO-XXXX-XXXX. Devuelve el usuario con el plan nuevo.</summary>
+        public Usuario Canjear(int usuarioId, string codigo)
+        {
+            string c = (codigo ?? string.Empty).Trim().ToUpperInvariant().Replace(" ", string.Empty);
+            if (!System.Text.RegularExpressions.Regex.IsMatch(c, "^PRO-[A-Z0-9]{4}-[A-Z0-9]{4}$"))
+                throw new ReglaDeNegocioException("El código tiene la forma PRO-XXXX-XXXX.");
+            _usuarios.CanjearCodigo(usuarioId, c);
+            return Actual(usuarioId);
+        }
+    }
+
     /// <summary>UNA SOLA MISION: vincular Telegram con la cuenta (paquete pkg_sg_telegram).</summary>
     public class ServicioTelegram
     {
         private readonly ITelegramDao _telegram;
+        private readonly ServicioPlanes _planes;
 
-        public ServicioTelegram(ITelegramDao telegram)
+        public ServicioTelegram(ITelegramDao telegram, ServicioPlanes planes)
         {
             _telegram = telegram;
+            _planes = planes;
         }
 
-        public string GenerarCodigo(int usuarioId) { return _telegram.GenerarCodigo(usuarioId); }
+        public string GenerarCodigo(int usuarioId)
+        {
+            _planes.ExigirPro(usuarioId, "El bot de Telegram");
+            return _telegram.GenerarCodigo(usuarioId);
+        }
         public int ChatsVinculados(int usuarioId) { return _telegram.ChatsVinculados(usuarioId); }
 
         public VinculoTelegram Vincular(long chatId, string codigo)
