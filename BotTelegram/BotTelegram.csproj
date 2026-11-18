@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Bot de Telegram de SGAPE. Corre en un servidor Linux (VM de Oracle Cloud) las 24 horas.
+       Usa la MISMA capa Logica que la aplicacion de escritorio: mismas reglas y mismos objetos de Oracle. -->
+
+  <ItemGroup>
+    <ProjectReference Include="..\Logica\Logica.csproj" />
+    <ProjectReference Include="..\Entidades\Entidades.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <AssemblyName>sgape-bot</AssemblyName>
+    <InvariantGlobalization>false</InvariantGlobalization>
+  </PropertyGroup>
+
+</Project>

@@ -431,3 +431,12 @@ FodyWeavers.xsd
 # --- SGAPE: publicacion e instalador ---
 Publicado/
 Instalador/Salida/
+# ---- SGAPE: secretos y salidas (NUNCA al repositorio) ----
+conexion.json
+Wallet_*/
+wallet/
+*.env
+!*.env.ejemplo
+Publicado/
+PublicadoBot/
+Instalador/Salida/

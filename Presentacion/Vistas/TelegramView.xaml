@@ -1,0 +1,49 @@
+<UserControl x:Class="Presentacion.Vistas.TelegramView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <StackPanel MaxWidth="760" HorizontalAlignment="Left">
+        <TextBlock Text="Telegram" Style="{StaticResource TituloSeccion}" />
+        <TextBlock TextWrapping="Wrap" Margin="0,0,0,16"
+                   Text="Vincula tu cuenta con el bot de SGAPE para consultar tus emprendimientos desde el celular, aunque el computador esté apagado: resumen, reporte en PDF, stock bajo, presupuestos, nómina y preguntas en lenguaje natural." />
+
+        <md:Card Style="{StaticResource Tarjeta}">
+            <StackPanel>
+                <TextBlock Text="1. Genera un código" FontWeight="SemiBold" />
+                <TextBlock Text="El código es de un solo uso y vence en 10 minutos." Opacity="0.7" Margin="0,4,0,12" />
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding GenerarCodigoCommand}">
+                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="KeyVariant" /><TextBlock Text="Generar código" Margin="6,0,0,0" /></StackPanel>
+                    </Button>
+                    <TextBlock Text="{Binding Codigo}" FontSize="32" FontWeight="Bold" FontFamily="Consolas" Margin="24,0,12,0" VerticalAlignment="Center"
+                               Foreground="{DynamicResource PrimaryHueDarkBrush}" />
+                    <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding CopiarCommand}" ToolTip="Copiar /vincular código"
+                            Visibility="{Binding Codigo, Converter={StaticResource NuloAVisible}}">
+                        <md:PackIcon Kind="ContentCopy" />
+                    </Button>
+                </StackPanel>
+                <TextBlock Text="{Binding Vence}" Margin="0,8,0,0" Visibility="{Binding Vence, Converter={StaticResource NuloAVisible}}" />
+            </StackPanel>
+        </md:Card>
+
+        <md:Card Style="{StaticResource Tarjeta}">
+            <StackPanel>
+                <TextBlock Text="2. Escríbele al bot" FontWeight="SemiBold" />
+                <TextBlock TextWrapping="Wrap" Margin="0,4,0,0"
+                           Text="Abre el bot de SGAPE en Telegram y envía /vincular seguido del código. Desde ese momento el bot solo te muestra TUS emprendimientos." />
+                <TextBlock TextWrapping="Wrap" Margin="0,12,0,0" Opacity="0.8"
+                           Text="Comandos: /resumen · /reporte · /stock · /presupuestos · /nomina · /emprendimientos · /desvincular · /ayuda" />
+            </StackPanel>
+        </md:Card>
+
+        <md:Card Style="{StaticResource Tarjeta}">
+            <StackPanel Orientation="Horizontal">
+                <md:PackIcon Kind="CellphoneLink" Width="28" Height="28" VerticalAlignment="Center" />
+                <TextBlock Text="{Binding ChatsVinculados, StringFormat='Chats vinculados a tu cuenta: {0}'}" FontSize="16" Margin="12,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+        </md:Card>
+
+        <TextBlock TextWrapping="Wrap" Opacity="0.7" Margin="0,4,0,0"
+                   Text="Los aspirantes a tus vacantes no necesitan vincularse: escriben /vacantes al mismo bot y envían su hoja de vida." />
+    </StackPanel>
+</UserControl>

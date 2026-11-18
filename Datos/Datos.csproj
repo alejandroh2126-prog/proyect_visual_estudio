@@ -5,7 +5,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.26.200" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="23.*" />
   </ItemGroup>
 
   <PropertyGroup>

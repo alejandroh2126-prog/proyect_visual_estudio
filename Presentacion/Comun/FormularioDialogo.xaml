@@ -1,0 +1,122 @@
+<UserControl x:Class="Presentacion.Comun.FormularioDialogo"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:c="clr-namespace:Presentacion.Comun">
+    <UserControl.Resources>
+        <!-- Texto y numeros (los numericos solo aceptan digitos: validacion en la interfaz) -->
+        <DataTemplate x:Key="PlantillaTexto">
+            <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Text="{Binding Texto, UpdateSourceTrigger=PropertyChanged}"
+                     MaxLength="{Binding MaxLongitud}"
+                     md:HintAssist.Hint="{Binding Pista}"
+                     md:HintAssist.HelperText="{Binding Ayuda}"
+                     c:SoloNumeros.Activo="{Binding EsNumerico}"
+                     c:SoloNumeros.Negativos="{Binding PermiteNegativos}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="PlantillaTextoLargo">
+            <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     Text="{Binding Texto, UpdateSourceTrigger=PropertyChanged}"
+                     MaxLength="{Binding MaxLongitud}"
+                     AcceptsReturn="True" TextWrapping="Wrap" MinHeight="80" VerticalContentAlignment="Top"
+                     md:HintAssist.Hint="{Binding Pista}"
+                     md:HintAssist.HelperText="{Binding Ayuda}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="PlantillaFecha">
+            <DatePicker Style="{StaticResource MaterialDesignOutlinedDatePicker}"
+                        SelectedDate="{Binding Fecha}"
+                        md:HintAssist.Hint="{Binding Pista}"
+                        md:HintAssist.HelperText="{Binding Ayuda}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="PlantillaLista">
+            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                      ItemsSource="{Binding Opciones}"
+                      SelectedItem="{Binding Seleccion}"
+                      md:HintAssist.Hint="{Binding Pista}"
+                      md:HintAssist.HelperText="{Binding Ayuda}" />
+        </DataTemplate>
+
+        <!-- Texto predictivo: al escribir "Valle" la lista completa "Valledupar (Cesar)" -->
+        <DataTemplate x:Key="PlantillaListaPredictiva">
+            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                      IsEditable="True" IsTextSearchEnabled="True" StaysOpenOnEdit="True"
+                      ItemsSource="{Binding Opciones}"
+                      SelectedItem="{Binding Seleccion}"
+                      md:HintAssist.Hint="{Binding Pista}"
+                      md:HintAssist.HelperText="{Binding Ayuda}">
+                <ComboBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <VirtualizingStackPanel />
+                    </ItemsPanelTemplate>
+                </ComboBox.ItemsPanel>
+            </ComboBox>
+        </DataTemplate>
+
+        <DataTemplate x:Key="PlantillaTextoPredictivo">
+            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                      IsEditable="True" IsTextSearchEnabled="True"
+                      ItemsSource="{Binding Opciones}"
+                      Text="{Binding Texto, UpdateSourceTrigger=PropertyChanged}"
+                      md:HintAssist.Hint="{Binding Pista}"
+                      md:HintAssist.HelperText="{Binding Ayuda}" />
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <!-- UNA sola ventana de crear/editar para todos los modulos: dibuja los campos que le pasen. -->
+    <StackPanel Margin="24" Width="460">
+        <TextBlock Text="{Binding Titulo}" Style="{StaticResource MaterialDesignHeadline6TextBlock}" Margin="0,0,0,18" />
+
+        <ScrollViewer MaxHeight="540" VerticalScrollBarVisibility="Auto" Padding="0,4,8,0">
+            <ItemsControl ItemsSource="{Binding Campos}" IsTabStop="False">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type c:CampoFormulario}">
+                        <StackPanel Margin="0,0,0,16" IsEnabled="{Binding Habilitado}">
+                            <!-- Solo se crea el control del tipo de campo (asi no hay dos controles enlazados al mismo valor) -->
+                            <ContentControl Content="{Binding}" IsTabStop="False" Focusable="False">
+                                <ContentControl.Style>
+                                    <Style TargetType="ContentControl">
+                                        <Setter Property="ContentTemplate" Value="{StaticResource PlantillaTexto}" />
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Tipo}" Value="TextoLargo">
+                                                <Setter Property="ContentTemplate" Value="{StaticResource PlantillaTextoLargo}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Tipo}" Value="Fecha">
+                                                <Setter Property="ContentTemplate" Value="{StaticResource PlantillaFecha}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Tipo}" Value="Lista">
+                                                <Setter Property="ContentTemplate" Value="{StaticResource PlantillaLista}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Tipo}" Value="ListaPredictiva">
+                                                <Setter Property="ContentTemplate" Value="{StaticResource PlantillaListaPredictiva}" />
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Tipo}" Value="TextoPredictivo">
+                                                <Setter Property="ContentTemplate" Value="{StaticResource PlantillaTextoPredictivo}" />
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </ContentControl.Style>
+                            </ContentControl>
+
+                            <TextBlock Text="{Binding Error}" Foreground="#C62828" FontSize="12" Margin="4,4,0,0" TextWrapping="Wrap"
+                                       Visibility="{Binding Error, Converter={StaticResource NuloAVisible}}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <TextBlock Text="{Binding Advertencia}" Foreground="#E65100" TextWrapping="Wrap" Margin="0,4,0,0"
+                   Visibility="{Binding Advertencia, Converter={StaticResource NuloAVisible}}" />
+        <TextBlock Text="{Binding MensajeError}" Foreground="#C62828" TextWrapping="Wrap" FontWeight="SemiBold" Margin="0,8,0,0"
+                   Visibility="{Binding MensajeError, Converter={StaticResource NuloAVisible}}" />
+        <ProgressBar IsIndeterminate="True" Margin="0,8,0,0" Visibility="{Binding Guardando, Converter={StaticResource BoolAVisible}}" />
+
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Content="Cancelar" Style="{StaticResource MaterialDesignFlatButton}" Command="{Binding CancelarCommand}" IsCancel="True" Margin="0,0,8,0" />
+            <Button Content="{Binding TextoBoton}" Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding GuardarCommand}" IsDefault="True" />
+        </StackPanel>
+    </StackPanel>
+</UserControl>

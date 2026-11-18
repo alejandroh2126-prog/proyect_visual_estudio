@@ -1,0 +1,15 @@
+<Window x:Class="Presentacion.Ventanas.VentanaCarga"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="SGAPE" Width="360" Height="170" WindowStyle="None" ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="True"
+        Background="{DynamicResource MaterialDesignPaper}" FontFamily="{md:MaterialDesignFont}">
+    <Border BorderBrush="{DynamicResource PrimaryHueMidBrush}" BorderThickness="2">
+        <StackPanel VerticalAlignment="Center" Margin="24">
+            <TextBlock Text="SGAPE" FontSize="24" FontWeight="Bold" Foreground="{DynamicResource PrimaryHueMidBrush}" HorizontalAlignment="Center" />
+            <TextBlock Text="Conectando con la base de datos en la nube..." Margin="0,10,0,14" HorizontalAlignment="Center" />
+            <ProgressBar IsIndeterminate="True" />
+        </StackPanel>
+    </Border>
+</Window>

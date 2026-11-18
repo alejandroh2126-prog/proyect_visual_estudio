@@ -1,0 +1,106 @@
+<UserControl x:Class="Presentacion.Vistas.NominaView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:v="clr-namespace:Presentacion.Vistas">
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="Nómina" Style="{StaticResource TituloSeccion}" />
+
+        <!-- Totales calculados por el paquete pkg_sg_nomina -->
+        <UniformGrid DockPanel.Dock="Top" Columns="5">
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Trabajadores activos" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding Resumen.TrabajadoresActivos}" Style="{StaticResource ValorKpi}" /></StackPanel>
+            </md:Card>
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Nómina mensual" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding Resumen.NominaMensual, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" /></StackPanel>
+            </md:Card>
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Pago quincenal" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding Resumen.NominaQuincenal, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" /></StackPanel>
+            </md:Card>
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Deducciones (8 %)" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding Resumen.TotalDeducciones, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" /></StackPanel>
+            </md:Card>
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Nómina neta" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding Resumen.NominaNeta, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" /></StackPanel>
+            </md:Card>
+        </UniformGrid>
+
+        <TabControl>
+            <TabItem Header="Trabajadores">
+                <DockPanel DataContext="{Binding Trabajadores}" Margin="0,12,0,0">
+                    <v:BarraCrud DockPanel.Dock="Top">
+                        <v:BarraCrud.Extra>
+                            <Button Style="{StaticResource BotonBarra}" Command="{Binding CambiarEstadoCommand}">
+                                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="AccountSwitchOutline" /><TextBlock Text="Activar / inactivar" Margin="6,0,0,0" /></StackPanel>
+                            </Button>
+                        </v:BarraCrud.Extra>
+                    </v:BarraCrud>
+                    <DataGrid ItemsSource="{Binding Vista}" SelectedItem="{Binding Seleccionado}" Style="{StaticResource Tabla}">
+                        <DataGrid.InputBindings>
+                            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditarCommand}" />
+                        </DataGrid.InputBindings>
+                        <DataGrid.Columns>
+                            <!-- Tipo y numero de documento en columnas separadas -->
+                            <DataGridTextColumn Header="Tipo doc." Binding="{Binding TipoDocumento}" />
+                            <DataGridTextColumn Header="Número" Binding="{Binding NumeroDocumento}" />
+                            <DataGridTextColumn Header="Nombres" Binding="{Binding Nombre}" Width="*" />
+                            <DataGridTextColumn Header="Apellidos" Binding="{Binding Apellido}" Width="*" />
+                            <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo}" Width="*" />
+                            <DataGridTextColumn Header="Salario" Binding="{Binding SalarioBase, Converter={StaticResource Moneda}}" />
+                            <DataGridTextColumn Header="Celular" Binding="{Binding Telefono}" />
+                            <DataGridTextColumn Header="Ingreso" Binding="{Binding FechaIngreso, Converter={StaticResource Fecha}}" />
+                            <DataGridTemplateColumn Header="Estado">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Estado}" FontWeight="SemiBold" Foreground="{Binding Estado, Converter={StaticResource EstadoAColor}}" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Cargos">
+                <DockPanel DataContext="{Binding Cargos}" Margin="0,12,0,0">
+                    <v:BarraCrud DockPanel.Dock="Top" />
+                    <DataGrid ItemsSource="{Binding Vista}" SelectedItem="{Binding Seleccionado}" Style="{StaticResource Tabla}">
+                        <DataGrid.InputBindings>
+                            <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditarCommand}" />
+                        </DataGrid.InputBindings>
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Cargo" Binding="{Binding Nombre}" Width="*" />
+                            <DataGridTextColumn Header="Salario base" Binding="{Binding SalarioBase, Converter={StaticResource Moneda}}" />
+                            <DataGridTextColumn Header="Quincena" Binding="{Binding SalarioQuincenal, Converter={StaticResource Moneda}}" />
+                            <DataGridTextColumn Header="Deducciones" Binding="{Binding Deducciones, Converter={StaticResource Moneda}}" />
+                            <DataGridTextColumn Header="Neto" Binding="{Binding SalarioNeto, Converter={StaticResource Moneda}}" />
+                            <DataGridTextColumn Header="Activos" Binding="{Binding TrabajadoresActivos}" />
+                            <DataGridTextColumn Header="Descripción" Binding="{Binding Descripcion}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <TabItem Header="Liquidación">
+                <DataGrid ItemsSource="{Binding Detalle}" Style="{StaticResource Tabla}" Margin="0,12,0,0">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Tipo doc." Binding="{Binding TipoDocumento}" />
+                        <DataGridTextColumn Header="Número" Binding="{Binding NumeroDocumento}" />
+                        <DataGridTextColumn Header="Trabajador" Binding="{Binding Trabajador}" Width="*" />
+                        <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo}" Width="*" />
+                        <DataGridTextColumn Header="Salario" Binding="{Binding SalarioBase, Converter={StaticResource Moneda}}" />
+                        <DataGridTextColumn Header="Quincena" Binding="{Binding PagoQuincenal, Converter={StaticResource Moneda}}" />
+                        <DataGridTextColumn Header="Salud 4 %" Binding="{Binding Salud, Converter={StaticResource Moneda}}" />
+                        <DataGridTextColumn Header="Pensión 4 %" Binding="{Binding Pension, Converter={StaticResource Moneda}}" />
+                        <DataGridTextColumn Header="Neto" Binding="{Binding Neto, Converter={StaticResource Moneda}}" />
+                    </DataGrid.Columns>
+                </DataGrid>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</UserControl>

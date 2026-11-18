@@ -1,0 +1,282 @@
+-- SGAPE v2 - Solo las 19 tablas relacionadas, para abrir el modelo en SQL Developer Data Modeler:
+-- Archivo > Data Modeler > Importar > Archivo DDL > elegir este archivo > Oracle Database > Fusionar.
+-- Luego, en el modelo relacional: clic derecho > "Aplicar ingeniería al modelo lógico" para ver el entidad-relación.
+-- (Las columnas identidad se escriben como NUMBER NOT NULL para que el importador no falle.)
+
+CREATE TABLE sg_departamento (
+    codigo  VARCHAR2(2)  NOT NULL,
+    nombre  VARCHAR2(60) NOT NULL,
+    CONSTRAINT pk_sg_departamento PRIMARY KEY (codigo),
+    CONSTRAINT uq_sg_departamento_nombre UNIQUE (nombre),
+    CONSTRAINT ck_sg_departamento_codigo CHECK (REGEXP_LIKE(codigo, '^[0-9]{2}$'))
+);
+
+-- Municipios de Colombia (codigo DIVIPOLA del DANE, 5 digitos: 2 del departamento + 3 del municipio)
+CREATE TABLE sg_ciudad (
+    codigo               VARCHAR2(5)  NOT NULL,
+    departamento_codigo  VARCHAR2(2)  NOT NULL,
+    nombre               VARCHAR2(80) NOT NULL,
+    CONSTRAINT pk_sg_ciudad PRIMARY KEY (codigo),
+    CONSTRAINT fk_sg_ciudad_depto FOREIGN KEY (departamento_codigo) REFERENCES sg_departamento (codigo),
+    CONSTRAINT ck_sg_ciudad_codigo CHECK (REGEXP_LIKE(codigo, '^[0-9]{5}$'))
+);
+
+-- Sectores economicos de un emprendimiento
+CREATE TABLE sg_sector (
+    id      NUMBER(10)    NOT NULL,
+    nombre  VARCHAR2(80)  NOT NULL,
+    CONSTRAINT pk_sg_sector PRIMARY KEY (id),
+    CONSTRAINT uq_sg_sector_nombre UNIQUE (nombre)
+);
+
+-- Cargos tipicos de cada sector, con un salario sugerido (el usuario los elige y puede ajustar el salario)
+CREATE TABLE sg_cargo_plantilla (
+    id                NUMBER(10)    NOT NULL,
+    sector_id         NUMBER(10)    NOT NULL,
+    nombre            VARCHAR2(100) NOT NULL,
+    salario_sugerido  NUMBER(14,2)  NOT NULL,
+    descripcion       VARCHAR2(300),
+    CONSTRAINT pk_sg_cargo_plantilla PRIMARY KEY (id),
+    CONSTRAINT fk_sg_cplant_sector FOREIGN KEY (sector_id) REFERENCES sg_sector (id) ON DELETE CASCADE,
+    CONSTRAINT uq_sg_cplant_nombre UNIQUE (sector_id, nombre),
+    CONSTRAINT ck_sg_cplant_salario CHECK (salario_sugerido > 0)
+);
+
+-- Tipos de documento de identidad y el patron (expresion regular) que debe cumplir el numero
+CREATE TABLE sg_tipo_documento (
+    codigo  VARCHAR2(5)   NOT NULL,
+    nombre  VARCHAR2(60)  NOT NULL,
+    patron  VARCHAR2(60)  NOT NULL,
+    ayuda   VARCHAR2(120) NOT NULL,
+    CONSTRAINT pk_sg_tipo_documento PRIMARY KEY (codigo),
+    CONSTRAINT uq_sg_tipo_documento_nombre UNIQUE (nombre)
+);
+
+-- Categorias de ingresos y gastos (las de sistema las usa el programa: Ventas e Inventario)
+CREATE TABLE sg_categoria_movimiento (
+    id       NUMBER(10)   NOT NULL,
+    nombre   VARCHAR2(80) NOT NULL,
+    tipo     VARCHAR2(10) NOT NULL,
+    sistema  CHAR(1)      DEFAULT 'N' NOT NULL,
+    CONSTRAINT pk_sg_categoria_mov PRIMARY KEY (id),
+    CONSTRAINT uq_sg_categoria_mov UNIQUE (nombre, tipo),
+    CONSTRAINT ck_sg_categoria_mov_tipo CHECK (tipo IN ('Ingreso', 'Gasto')),
+    CONSTRAINT ck_sg_categoria_mov_sis  CHECK (sistema IN ('S', 'N'))
+);
+
+-- ---------------------------------------------------------------------
+-- 1.2 NEGOCIO
+-- ---------------------------------------------------------------------
+
+CREATE TABLE sg_usuario (
+    id              NUMBER(10)    NOT NULL,
+    nombre          VARCHAR2(100) NOT NULL,
+    email           VARCHAR2(150) NOT NULL,
+    clave_hash      VARCHAR2(500) NOT NULL,   -- PBKDF2 + sal (la clave nunca se guarda en texto)
+    fecha_registro  DATE DEFAULT SYSDATE NOT NULL,
+    CONSTRAINT pk_sg_usuario PRIMARY KEY (id),
+    CONSTRAINT uq_sg_usuario_email UNIQUE (email),
+    CONSTRAINT ck_sg_usuario_email CHECK (REGEXP_LIKE(email, '^[^@ ]+@[^@ ]+\.[a-z]{2,}$'))
+);
+
+CREATE TABLE sg_emprendimiento (
+    id             NUMBER(10)    NOT NULL,
+    usuario_id     NUMBER(10)    NOT NULL,
+    nombre         VARCHAR2(150) NOT NULL,
+    descripcion    VARCHAR2(500),
+    sector_id      NUMBER(10)    NOT NULL,
+    ciudad_codigo  VARCHAR2(5)   NOT NULL,
+    fecha_inicio   DATE          NOT NULL,
+    estado         VARCHAR2(20)  DEFAULT 'activo' NOT NULL,
+    CONSTRAINT pk_sg_emprendimiento PRIMARY KEY (id),
+    CONSTRAINT fk_sg_emp_usuario FOREIGN KEY (usuario_id)    REFERENCES sg_usuario (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_emp_sector  FOREIGN KEY (sector_id)     REFERENCES sg_sector (id),
+    CONSTRAINT fk_sg_emp_ciudad  FOREIGN KEY (ciudad_codigo) REFERENCES sg_ciudad (codigo),
+    CONSTRAINT uq_sg_emp_nombre  UNIQUE (usuario_id, nombre),
+    CONSTRAINT ck_sg_emp_estado  CHECK (estado IN ('activo', 'inactivo'))
+);
+
+CREATE TABLE sg_cargo (
+    id                 NUMBER(10)    NOT NULL,
+    emprendimiento_id  NUMBER(10)    NOT NULL,
+    plantilla_id       NUMBER(10),
+    nombre             VARCHAR2(100) NOT NULL,
+    salario_base       NUMBER(14,2)  NOT NULL,
+    descripcion        VARCHAR2(300),
+    CONSTRAINT pk_sg_cargo PRIMARY KEY (id),
+    CONSTRAINT fk_sg_cargo_emp       FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_cargo_plantilla FOREIGN KEY (plantilla_id)      REFERENCES sg_cargo_plantilla (id) ON DELETE SET NULL,
+    CONSTRAINT uq_sg_cargo_nombre    UNIQUE (emprendimiento_id, nombre),
+    CONSTRAINT ck_sg_cargo_salario   CHECK (salario_base > 0)
+);
+
+-- El documento se guarda en DOS columnas: tipo (catalogo) y numero.
+CREATE TABLE sg_trabajador (
+    id                 NUMBER(10)    NOT NULL,
+    emprendimiento_id  NUMBER(10)    NOT NULL,
+    cargo_id           NUMBER(10)    NOT NULL,
+    tipo_documento     VARCHAR2(5)   NOT NULL,
+    numero_documento   VARCHAR2(20)  NOT NULL,
+    nombre             VARCHAR2(100) NOT NULL,
+    apellido           VARCHAR2(100) NOT NULL,
+    telefono           VARCHAR2(10),
+    email              VARCHAR2(150),
+    ciudad_codigo      VARCHAR2(5),
+    fecha_ingreso      DATE          NOT NULL,
+    estado             VARCHAR2(20)  DEFAULT 'activo' NOT NULL,
+    CONSTRAINT pk_sg_trabajador PRIMARY KEY (id),
+    CONSTRAINT fk_sg_trab_emp    FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_trab_cargo  FOREIGN KEY (cargo_id)          REFERENCES sg_cargo (id),
+    CONSTRAINT fk_sg_trab_tdoc   FOREIGN KEY (tipo_documento)    REFERENCES sg_tipo_documento (codigo),
+    CONSTRAINT fk_sg_trab_ciudad FOREIGN KEY (ciudad_codigo)     REFERENCES sg_ciudad (codigo),
+    CONSTRAINT uq_sg_trab_doc    UNIQUE (emprendimiento_id, tipo_documento, numero_documento),
+    CONSTRAINT ck_sg_trab_estado CHECK (estado IN ('activo', 'inactivo')),
+    CONSTRAINT ck_sg_trab_tel    CHECK (telefono IS NULL OR REGEXP_LIKE(telefono, '^[0-9]{7,10}$'))
+);
+
+CREATE TABLE sg_producto (
+    id                 NUMBER(10)    NOT NULL,
+    emprendimiento_id  NUMBER(10)    NOT NULL,
+    nombre             VARCHAR2(150) NOT NULL,
+    categoria          VARCHAR2(100),
+    precio_compra      NUMBER(14,2)  NOT NULL,
+    precio_venta       NUMBER(14,2)  NOT NULL,
+    stock              NUMBER(10)    DEFAULT 0 NOT NULL,
+    stock_minimo       NUMBER(10)    DEFAULT 0 NOT NULL,
+    CONSTRAINT pk_sg_producto PRIMARY KEY (id),
+    CONSTRAINT fk_sg_prod_emp     FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE CASCADE,
+    CONSTRAINT uq_sg_prod_nombre  UNIQUE (emprendimiento_id, nombre),
+    CONSTRAINT ck_sg_prod_precios CHECK (precio_compra >= 0 AND precio_venta > 0),
+    CONSTRAINT ck_sg_prod_stock   CHECK (stock >= 0 AND stock_minimo >= 0)
+);
+
+CREATE TABLE sg_venta (
+    id                 NUMBER(10)    NOT NULL,
+    emprendimiento_id  NUMBER(10)    NOT NULL,
+    fecha              DATE          DEFAULT SYSDATE NOT NULL,
+    observacion        VARCHAR2(500),
+    CONSTRAINT pk_sg_venta PRIMARY KEY (id),
+    CONSTRAINT fk_sg_venta_emp FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE CASCADE
+);
+
+-- producto_id NO es llave foranea a proposito: si se elimina un producto, la venta historica se conserva
+-- (el detalle guarda el nombre y el precio tal como se vendio).
+CREATE TABLE sg_detalle_venta (
+    id               NUMBER(10)    NOT NULL,
+    venta_id         NUMBER(10)    NOT NULL,
+    producto_id      NUMBER(10)    NOT NULL,
+    producto_nombre  VARCHAR2(150) NOT NULL,
+    cantidad         NUMBER(10)    NOT NULL,
+    precio_unitario  NUMBER(14,2)  NOT NULL,
+    CONSTRAINT pk_sg_detalle_venta PRIMARY KEY (id),
+    CONSTRAINT fk_sg_det_venta  FOREIGN KEY (venta_id) REFERENCES sg_venta (id) ON DELETE CASCADE,
+    CONSTRAINT ck_sg_det_cant   CHECK (cantidad > 0),
+    CONSTRAINT ck_sg_det_precio CHECK (precio_unitario >= 0)
+);
+
+CREATE TABLE sg_movimiento (
+    id                 NUMBER(10)    NOT NULL,
+    emprendimiento_id  NUMBER(10)    NOT NULL,
+    fecha              DATE          DEFAULT SYSDATE NOT NULL,
+    tipo               VARCHAR2(20)  NOT NULL,
+    categoria_id       NUMBER(10)    NOT NULL,
+    descripcion        VARCHAR2(300),
+    monto              NUMBER(14,2)  NOT NULL,
+    referencia         VARCHAR2(100),
+    CONSTRAINT pk_sg_movimiento PRIMARY KEY (id),
+    CONSTRAINT fk_sg_mov_emp FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_mov_cat FOREIGN KEY (categoria_id)      REFERENCES sg_categoria_movimiento (id),
+    CONSTRAINT ck_sg_mov_tipo  CHECK (tipo IN ('Venta', 'Compra', 'AjusteStock', 'Gasto', 'Ingreso')),
+    CONSTRAINT ck_sg_mov_monto CHECK (monto > 0)
+);
+
+-- Un presupuesto por categoria y por mes (ya no se puede repetir)
+CREATE TABLE sg_presupuesto (
+    id                 NUMBER(10)    NOT NULL,
+    emprendimiento_id  NUMBER(10)    NOT NULL,
+    categoria_id       NUMBER(10)    NOT NULL,
+    monto_limite       NUMBER(14,2)  NOT NULL,
+    mes                VARCHAR2(7)   NOT NULL,   -- formato yyyy-MM
+    CONSTRAINT pk_sg_presupuesto PRIMARY KEY (id),
+    CONSTRAINT fk_sg_pres_emp FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_pres_cat FOREIGN KEY (categoria_id)      REFERENCES sg_categoria_movimiento (id),
+    CONSTRAINT uq_sg_pres     UNIQUE (emprendimiento_id, categoria_id, mes),
+    CONSTRAINT ck_sg_pres_monto CHECK (monto_limite > 0)
+);
+
+-- ---------------------------------------------------------------------
+-- 1.3 VACANTES Y POSTULACIONES (hojas de vida por Telegram)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE sg_vacante (
+    id                 NUMBER(10)     NOT NULL,
+    emprendimiento_id  NUMBER(10)     NOT NULL,
+    cargo_id           NUMBER(10)     NOT NULL,
+    titulo             VARCHAR2(120)  NOT NULL,
+    descripcion        VARCHAR2(1000),
+    ciudad_codigo      VARCHAR2(5)    NOT NULL,
+    fecha_publicacion  DATE DEFAULT SYSDATE NOT NULL,
+    fecha_cierre       DATE,
+    estado             VARCHAR2(10)   DEFAULT 'abierta' NOT NULL,
+    CONSTRAINT pk_sg_vacante PRIMARY KEY (id),
+    CONSTRAINT fk_sg_vac_emp    FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_vac_cargo  FOREIGN KEY (cargo_id)          REFERENCES sg_cargo (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_vac_ciudad FOREIGN KEY (ciudad_codigo)     REFERENCES sg_ciudad (codigo),
+    CONSTRAINT ck_sg_vac_estado CHECK (estado IN ('abierta', 'cerrada')),
+    CONSTRAINT ck_sg_vac_fechas CHECK (fecha_cierre IS NULL OR fecha_cierre >= TRUNC(fecha_publicacion))
+);
+
+-- La hoja de vida se guarda dentro de Oracle (BLOB): el programa no usa archivos locales.
+CREATE TABLE sg_postulacion (
+    id                NUMBER(10)    NOT NULL,
+    vacante_id        NUMBER(10)    NOT NULL,
+    tipo_documento    VARCHAR2(5)   NOT NULL,
+    numero_documento  VARCHAR2(20)  NOT NULL,
+    nombre            VARCHAR2(100) NOT NULL,
+    apellido          VARCHAR2(100) NOT NULL,
+    telefono          VARCHAR2(10)  NOT NULL,
+    email             VARCHAR2(150),
+    ciudad_codigo     VARCHAR2(5)   NOT NULL,
+    cv                BLOB          NOT NULL,
+    cv_nombre         VARCHAR2(200) NOT NULL,
+    cv_tipo           VARCHAR2(100) NOT NULL,
+    telegram_chat_id  NUMBER(20),
+    autoriza_datos    CHAR(1)       NOT NULL,   -- Ley 1581 de 2012: autorizacion de tratamiento de datos
+    fecha             DATE DEFAULT SYSDATE NOT NULL,
+    estado            VARCHAR2(12)  DEFAULT 'recibida' NOT NULL,
+    CONSTRAINT pk_sg_postulacion PRIMARY KEY (id),
+    CONSTRAINT fk_sg_post_vacante FOREIGN KEY (vacante_id)     REFERENCES sg_vacante (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_post_tdoc    FOREIGN KEY (tipo_documento) REFERENCES sg_tipo_documento (codigo),
+    CONSTRAINT fk_sg_post_ciudad  FOREIGN KEY (ciudad_codigo)  REFERENCES sg_ciudad (codigo),
+    CONSTRAINT uq_sg_post_doc     UNIQUE (vacante_id, tipo_documento, numero_documento),
+    CONSTRAINT ck_sg_post_autoriza CHECK (autoriza_datos = 'S'),
+    CONSTRAINT ck_sg_post_estado  CHECK (estado IN ('recibida', 'en_revision', 'aceptada', 'rechazada')),
+    CONSTRAINT ck_sg_post_tel     CHECK (REGEXP_LIKE(telefono, '^[0-9]{7,10}$')),
+    CONSTRAINT ck_sg_post_tipo_cv CHECK (cv_tipo IN ('application/pdf',
+                                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'))
+);
+
+-- ---------------------------------------------------------------------
+-- 1.4 TELEGRAM (el bot solo responde a chats vinculados a un usuario)
+-- ---------------------------------------------------------------------
+
+CREATE TABLE sg_telegram_vinculo (
+    chat_id            NUMBER(20)  NOT NULL,
+    usuario_id         NUMBER(10)  NOT NULL,
+    emprendimiento_id  NUMBER(10),             -- emprendimiento activo en el chat
+    fecha_vinculo      DATE DEFAULT SYSDATE NOT NULL,
+    CONSTRAINT pk_sg_telegram_vinculo PRIMARY KEY (chat_id),
+    CONSTRAINT fk_sg_tvin_usuario FOREIGN KEY (usuario_id)        REFERENCES sg_usuario (id) ON DELETE CASCADE,
+    CONSTRAINT fk_sg_tvin_emp     FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE SET NULL
+);
+
+-- Codigo de un solo uso que la aplicacion muestra para vincular Telegram (vence en 10 minutos)
+CREATE TABLE sg_telegram_codigo (
+    codigo      VARCHAR2(6) NOT NULL,
+    usuario_id  NUMBER(10)  NOT NULL,
+    expira      DATE        NOT NULL,
+    CONSTRAINT pk_sg_telegram_codigo PRIMARY KEY (codigo),
+    CONSTRAINT fk_sg_tcod_usuario FOREIGN KEY (usuario_id) REFERENCES sg_usuario (id) ON DELETE CASCADE,
+    CONSTRAINT ck_sg_tcod_codigo  CHECK (REGEXP_LIKE(codigo, '^[0-9]{6}$'))
+);
+

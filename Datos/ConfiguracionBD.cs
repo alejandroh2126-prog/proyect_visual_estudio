@@ -1,39 +1,51 @@
 using System;
 using System.IO;
 using System.Text.Json;
-using Logica.Utilidades;
+using Entidades;
 
 namespace Datos
 {
     /// <summary>
-    /// UNA SOLA MISION: leer de donde se guardan los datos y como conectarse.
-    /// Lee el archivo %LOCALAPPDATA%\SGAPE\conexion.json. La clave de la base de datos vive
-    /// SOLO en ese archivo (en tu computador), nunca dentro del codigo ni del repositorio de Git.
+    /// UNA SOLA MISION: saber como conectarse a Oracle.
+    /// 1) Variables de entorno (las usa el bot en el servidor):
+    ///    SGAPE_DB_USUARIO, SGAPE_DB_CLAVE, SGAPE_DB_DATASOURCE, SGAPE_DB_WALLET
+    /// 2) Si no existen, el archivo %LOCALAPPDATA%\SGAPE\conexion.json (lo usa la aplicacion de escritorio).
+    /// La clave NUNCA va en el codigo ni en el repositorio de Git.
     /// </summary>
     public class ConfiguracionBD
     {
         public string Usuario { get; set; } = string.Empty;
         public string Clave { get; set; } = string.Empty;
 
-        /// <summary>Alias del tnsnames.ora (ej: sgape_low) o cadena Easy Connect (ej: localhost:1521/XEPDB1).</summary>
+        /// <summary>Alias del tnsnames.ora (ej: sgape_low) o Easy Connect (ej: localhost:1521/XEPDB1).</summary>
         public string DataSource { get; set; } = string.Empty;
 
-        /// <summary>Carpeta del wallet descomprimido (solo para Autonomous Database). Vacio si es Oracle local.</summary>
+        /// <summary>Carpeta del wallet descomprimido (Autonomous Database). Vacio si es Oracle local.</summary>
         public string CarpetaWallet { get; set; } = string.Empty;
 
         public static string RutaArchivo
         {
             get
             {
-                return Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    "SGAPE", "conexion.json");
+                return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                    "SGAPE", "conexion.json");
             }
         }
 
         public static ConfiguracionBD Cargar()
         {
-            ConfiguracionBD config = new ConfiguracionBD();
+            string? usuarioEnv = Environment.GetEnvironmentVariable("SGAPE_DB_USUARIO");
+            if (!string.IsNullOrWhiteSpace(usuarioEnv))
+            {
+                return new ConfiguracionBD
+                {
+                    Usuario = usuarioEnv,
+                    Clave = Environment.GetEnvironmentVariable("SGAPE_DB_CLAVE") ?? string.Empty,
+                    DataSource = Environment.GetEnvironmentVariable("SGAPE_DB_DATASOURCE") ?? string.Empty,
+                    CarpetaWallet = Environment.GetEnvironmentVariable("SGAPE_DB_WALLET") ?? string.Empty
+                };
+            }
+
             if (!File.Exists(RutaArchivo))
                 throw new ReglaDeNegocioException(
                     "No se encontró el archivo de conexión a Oracle:" + Environment.NewLine + RutaArchivo +
@@ -45,21 +57,19 @@ namespace Datos
                 using (JsonDocument doc = JsonDocument.Parse(File.ReadAllText(RutaArchivo)))
                 {
                     JsonElement raiz = doc.RootElement;
-                    config.Usuario = Leer(raiz, "usuario");
-                    config.Clave = Leer(raiz, "clave");
-                    config.DataSource = Leer(raiz, "dataSource");
-                    config.CarpetaWallet = Leer(raiz, "carpetaWallet");
+                    return new ConfiguracionBD
+                    {
+                        Usuario = Leer(raiz, "usuario"),
+                        Clave = Leer(raiz, "clave"),
+                        DataSource = Leer(raiz, "dataSource"),
+                        CarpetaWallet = Leer(raiz, "carpetaWallet")
+                    };
                 }
             }
             catch (JsonException)
             {
                 throw new ReglaDeNegocioException("El archivo conexion.json no tiene un formato válido.");
             }
-            catch (InvalidOperationException)
-            {
-                throw new ReglaDeNegocioException("El archivo conexion.json no tiene un formato válido.");
-            }
-            return config;
         }
 
         private static string Leer(JsonElement raiz, string propiedad)

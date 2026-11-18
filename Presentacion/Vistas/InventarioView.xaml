@@ -1,0 +1,66 @@
+<UserControl x:Class="Presentacion.Vistas.InventarioView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:v="clr-namespace:Presentacion.Vistas">
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Top">
+                <md:Chip Content="{Binding ConStockBajo}" ContentStringFormat="{}{0} con stock bajo" IconBackground="#C62828" Margin="0,0,8,0">
+                    <md:Chip.Icon><md:PackIcon Kind="AlertOutline" /></md:Chip.Icon>
+                </md:Chip>
+                <md:Chip Content="{Binding ValorInventario, Converter={StaticResource Moneda}}" ToolTip="Valor del inventario a precio de compra">
+                    <md:Chip.Icon><md:PackIcon Kind="PackageVariant" /></md:Chip.Icon>
+                </md:Chip>
+            </StackPanel>
+            <TextBlock Text="Inventario" Style="{StaticResource TituloSeccion}" />
+        </DockPanel>
+
+        <v:BarraCrud DockPanel.Dock="Top">
+            <v:BarraCrud.Extra>
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource BotonBarra}" Command="{Binding EntradaCommand}">
+                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="PackageDown" /><TextBlock Text="Entrada" Margin="6,0,0,0" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource BotonBarra}" Command="{Binding SalidaCommand}">
+                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="PackageUp" /><TextBlock Text="Salida" Margin="6,0,0,0" /></StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource BotonBarra}" Command="{Binding AjustarPreciosCommand}">
+                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="PercentOutline" /><TextBlock Text="Ajustar precios" Margin="6,0,0,0" /></StackPanel>
+                    </Button>
+                </StackPanel>
+            </v:BarraCrud.Extra>
+        </v:BarraCrud>
+
+        <DataGrid ItemsSource="{Binding Vista}" SelectedItem="{Binding Seleccionado}" Style="{StaticResource Tabla}">
+            <DataGrid.InputBindings>
+                <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditarCommand}" />
+            </DataGrid.InputBindings>
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding StockBajo}" Value="True">
+                            <Setter Property="Background" Value="#FFEBEE" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Producto" Binding="{Binding Nombre}" Width="2*" />
+                <DataGridTextColumn Header="Categoría" Binding="{Binding Categoria}" Width="*" />
+                <DataGridTextColumn Header="P. compra" Binding="{Binding PrecioCompra, Converter={StaticResource Moneda}}" />
+                <DataGridTextColumn Header="P. venta" Binding="{Binding PrecioVenta, Converter={StaticResource Moneda}}" />
+                <DataGridTextColumn Header="Margen" Binding="{Binding MargenPorcentaje, Converter={StaticResource Porcentaje}}" />
+                <DataGridTemplateColumn Header="Stock">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Stock}" FontWeight="SemiBold" Foreground="{Binding StockBajo, Converter={StaticResource EstadoAColor}}" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+                <DataGridTextColumn Header="Mínimo" Binding="{Binding StockMinimo}" />
+                <DataGridTextColumn Header="Valor en bodega" Binding="{Binding ValorInventario, Converter={StaticResource Moneda}}" />
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>

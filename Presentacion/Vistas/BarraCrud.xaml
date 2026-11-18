@@ -1,0 +1,24 @@
+<UserControl x:Class="Presentacion.Vistas.BarraCrud"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <!-- Barra comun de TODAS las listas: un solo boton Nuevo / Editar / Eliminar / Buscar (sin repetirlos en cada pantalla). -->
+    <DockPanel Margin="0,0,0,12" LastChildFill="False">
+        <Button DockPanel.Dock="Left" Style="{StaticResource BotonPrincipal}" Command="{Binding NuevoCommand}">
+            <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Plus" /><TextBlock Text="Nuevo" Margin="6,0,0,0" /></StackPanel>
+        </Button>
+        <Button DockPanel.Dock="Left" Style="{StaticResource BotonBarra}" Command="{Binding EditarCommand}" ToolTip="También con doble clic en la fila">
+            <StackPanel Orientation="Horizontal"><md:PackIcon Kind="PencilOutline" /><TextBlock Text="Editar" Margin="6,0,0,0" /></StackPanel>
+        </Button>
+        <Button DockPanel.Dock="Left" Style="{StaticResource BotonBarra}" Command="{Binding EliminarCommand}">
+            <StackPanel Orientation="Horizontal"><md:PackIcon Kind="DeleteOutline" /><TextBlock Text="Eliminar" Margin="6,0,0,0" /></StackPanel>
+        </Button>
+        <ContentPresenter DockPanel.Dock="Left" Content="{Binding Extra, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+
+        <Button DockPanel.Dock="Right" Style="{StaticResource MaterialDesignIconButton}" Command="{Binding RecargarCommand}" ToolTip="Recargar">
+            <md:PackIcon Kind="Refresh" />
+        </Button>
+        <TextBox DockPanel.Dock="Right" Style="{StaticResource Buscador}" Margin="0,0,8,0"
+                 Text="{Binding Filtro, UpdateSourceTrigger=PropertyChanged}" />
+    </DockPanel>
+</UserControl>

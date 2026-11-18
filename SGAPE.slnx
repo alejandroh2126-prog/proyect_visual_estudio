@@ -3,4 +3,5 @@
   <Project Path="Datos/Datos.csproj" />
   <Project Path="Logica/Logica.csproj" />
   <Project Path="Presentacion/Presentacion.csproj" />
+  <Project Path="BotTelegram/BotTelegram.csproj" />
 </Solution>

@@ -1,0 +1,123 @@
+<UserControl x:Class="Presentacion.Vistas.VentasView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:c="clr-namespace:Presentacion.Comun">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="5*" />
+            <ColumnDefinition Width="24" />
+            <ColumnDefinition Width="4*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Nueva venta -->
+        <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="Nueva venta" Style="{StaticResource TituloSeccion}" />
+
+            <Grid DockPanel.Dock="Top" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="110" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <!-- Texto predictivo: se escribe el nombre y la lista lo completa -->
+                <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}" IsEditable="True" IsTextSearchEnabled="True"
+                          TextSearch.TextPath="Nombre" ItemsSource="{Binding Productos}" SelectedItem="{Binding ProductoElegido}"
+                          md:HintAssist.Hint="Producto (escribe para buscar)">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Nombre}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding PrecioVenta, Converter={StaticResource Moneda}}" Margin="12,0,0,0" Opacity="0.8" />
+                                <TextBlock Text="{Binding Stock, StringFormat=' · stock {0}'}" Opacity="0.6" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBox Grid.Column="1" Margin="8,0" Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="Cantidad"
+                         Text="{Binding Cantidad, UpdateSourceTrigger=PropertyChanged}" MaxLength="6" c:SoloNumeros.Activo="True" />
+                <Button Grid.Column="2" Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding AgregarCommand}" Height="44">
+                    <StackPanel Orientation="Horizontal"><md:PackIcon Kind="CartPlus" /><TextBlock Text="Agregar" Margin="6,0,0,0" /></StackPanel>
+                </Button>
+            </Grid>
+
+            <StackPanel DockPanel.Dock="Bottom">
+                <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}" md:HintAssist.Hint="Observación (cliente, nota) - opcional"
+                         Text="{Binding Observacion, UpdateSourceTrigger=PropertyChanged}" MaxLength="500" Margin="0,12,0,12" />
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" FontSize="22" FontWeight="Bold"
+                               Text="{Binding Total, Converter={StaticResource Moneda}, StringFormat='Total: {0}'}" />
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="Vaciar" Style="{StaticResource BotonBarra}" Command="{Binding VaciarCommand}" />
+                        <Button Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding RegistrarCommand}" Height="44">
+                            <StackPanel Orientation="Horizontal"><md:PackIcon Kind="CheckBold" /><TextBlock Text="Registrar venta" Margin="6,0,0,0" /></StackPanel>
+                        </Button>
+                    </StackPanel>
+                </DockPanel>
+            </StackPanel>
+
+            <DataGrid ItemsSource="{Binding Carrito}" Style="{StaticResource Tabla}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Producto" Binding="{Binding Nombre}" Width="*" />
+                    <DataGridTextColumn Header="Cant." Binding="{Binding Cantidad}" />
+                    <DataGridTextColumn Header="Precio" Binding="{Binding Precio, Converter={StaticResource Moneda}}" />
+                    <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, Converter={StaticResource Moneda}}" />
+                    <DataGridTemplateColumn>
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Style="{StaticResource MaterialDesignIconButton}" Width="30" Height="30" ToolTip="Quitar"
+                                        Command="{Binding DataContext.QuitarCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                        CommandParameter="{Binding}">
+                                    <md:PackIcon Kind="Close" />
+                                </Button>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+
+        <!-- Historial -->
+        <DockPanel Grid.Column="2">
+            <UniformGrid DockPanel.Dock="Top" Columns="3">
+                <md:Card Style="{StaticResource Tarjeta}">
+                    <StackPanel><TextBlock Text="Hoy" Style="{StaticResource EtiquetaKpi}" />
+                        <TextBlock Text="{Binding Resumen.Hoy, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" FontSize="18" /></StackPanel>
+                </md:Card>
+                <md:Card Style="{StaticResource Tarjeta}">
+                    <StackPanel><TextBlock Text="Últimos 7 días" Style="{StaticResource EtiquetaKpi}" />
+                        <TextBlock Text="{Binding Resumen.UltimosSieteDias, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" FontSize="18" /></StackPanel>
+                </md:Card>
+                <md:Card Style="{StaticResource Tarjeta}">
+                    <StackPanel><TextBlock Text="Este mes" Style="{StaticResource EtiquetaKpi}" />
+                        <TextBlock Text="{Binding Resumen.EsteMes, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" FontSize="18" /></StackPanel>
+                </md:Card>
+            </UniformGrid>
+
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                <Button DockPanel.Dock="Right" Style="{StaticResource BotonBarra}" Command="{Binding FacturaCommand}" Margin="0">
+                    <StackPanel Orientation="Horizontal"><md:PackIcon Kind="FilePdfBox" /><TextBlock Text="Factura PDF" Margin="6,0,0,0" /></StackPanel>
+                </Button>
+                <TextBlock Text="Historial de ventas" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+            </DockPanel>
+
+            <DataGrid DockPanel.Dock="Bottom" ItemsSource="{Binding Detalle.Detalles}" Style="{StaticResource Tabla}" MaxHeight="200" Margin="0,12,0,0">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Producto vendido" Binding="{Binding ProductoNombre}" Width="*" />
+                    <DataGridTextColumn Header="Cant." Binding="{Binding Cantidad}" />
+                    <DataGridTextColumn Header="Precio" Binding="{Binding PrecioUnitario, Converter={StaticResource Moneda}}" />
+                    <DataGridTextColumn Header="Subtotal" Binding="{Binding Subtotal, Converter={StaticResource Moneda}}" />
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <DataGrid ItemsSource="{Binding Historial}" SelectedItem="{Binding VentaSeleccionada}" Style="{StaticResource Tabla}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="N.º" Binding="{Binding Id}" />
+                    <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, Converter={StaticResource Fecha}, ConverterParameter=hora}" />
+                    <DataGridTextColumn Header="Observación" Binding="{Binding Observacion}" Width="*" />
+                    <DataGridTextColumn Header="Total" Binding="{Binding Total, Converter={StaticResource Moneda}}" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
+    </Grid>
+</UserControl>

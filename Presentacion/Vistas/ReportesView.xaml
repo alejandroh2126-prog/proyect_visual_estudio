@@ -1,0 +1,80 @@
+<UserControl x:Class="Presentacion.Vistas.ReportesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Style="{StaticResource MaterialDesignRaisedButton}" Command="{Binding GenerarPdfCommand}" Height="42">
+                    <StackPanel Orientation="Horizontal"><md:PackIcon Kind="FilePdfBox" /><TextBlock Text="Generar reporte PDF" Margin="6,0,0,0" /></StackPanel>
+                </Button>
+                <TextBlock Text="Reportes" Style="{StaticResource TituloSeccion}" />
+            </DockPanel>
+            <TextBlock Opacity="0.75" TextWrapping="Wrap" Margin="0,0,0,12"
+                       Text="Todos los números salen de los paquetes pkg_sg_reportes y pkg_sg_nomina de Oracle. El mismo PDF lo envía el bot de Telegram con /reporte." />
+
+            <UniformGrid Columns="4">
+                <md:Card Style="{StaticResource Tarjeta}">
+                    <StackPanel><TextBlock Text="Ventas históricas" Style="{StaticResource EtiquetaKpi}" />
+                        <TextBlock Text="{Binding Datos.Ventas.TotalHistorico, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" />
+                        <TextBlock Text="{Binding Datos.Ventas.CantidadVentas, StringFormat='{}{0} ventas'}" Style="{StaticResource EtiquetaKpi}" /></StackPanel>
+                </md:Card>
+                <md:Card Style="{StaticResource Tarjeta}">
+                    <StackPanel><TextBlock Text="Balance" Style="{StaticResource EtiquetaKpi}" />
+                        <TextBlock Text="{Binding Datos.Finanzas.Balance, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}"
+                                   Foreground="{Binding Datos.Finanzas.Balance, Converter={StaticResource EstadoAColor}}" /></StackPanel>
+                </md:Card>
+                <md:Card Style="{StaticResource Tarjeta}">
+                    <StackPanel><TextBlock Text="Valor del inventario" Style="{StaticResource EtiquetaKpi}" />
+                        <TextBlock Text="{Binding Datos.ValorInventario, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" /></StackPanel>
+                </md:Card>
+                <md:Card Style="{StaticResource Tarjeta}">
+                    <StackPanel><TextBlock Text="Nómina neta" Style="{StaticResource EtiquetaKpi}" />
+                        <TextBlock Text="{Binding Datos.Nomina.NominaNeta, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" /></StackPanel>
+                </md:Card>
+            </UniformGrid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <md:Card Style="{StaticResource Tarjeta}">
+                    <StackPanel>
+                        <TextBlock Text="Ventas por mes" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <DataGrid ItemsSource="{Binding Datos.VentasPorMes}" Style="{StaticResource Tabla}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Mes" Binding="{Binding Etiqueta}" Width="*" />
+                                <DataGridTextColumn Header="Total" Binding="{Binding Valor, Converter={StaticResource Moneda}}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </md:Card>
+                <md:Card Grid.Column="1" Style="{StaticResource Tarjeta}">
+                    <StackPanel>
+                        <TextBlock Text="Más vendidos" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <DataGrid ItemsSource="{Binding Datos.TopProductos}" Style="{StaticResource Tabla}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Producto" Binding="{Binding Etiqueta}" Width="*" />
+                                <DataGridTextColumn Header="Und." Binding="{Binding Cantidad}" />
+                                <DataGridTextColumn Header="Ingresos" Binding="{Binding Valor, Converter={StaticResource Moneda}}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </md:Card>
+                <md:Card Grid.Column="2" Style="{StaticResource Tarjeta}">
+                    <StackPanel>
+                        <TextBlock Text="Gastos por categoría" FontWeight="SemiBold" Margin="0,0,0,8" />
+                        <DataGrid ItemsSource="{Binding Datos.GastosPorCategoria}" Style="{StaticResource Tabla}">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Categoría" Binding="{Binding Etiqueta}" Width="*" />
+                                <DataGridTextColumn Header="Total" Binding="{Binding Valor, Converter={StaticResource Moneda}}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </StackPanel>
+                </md:Card>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

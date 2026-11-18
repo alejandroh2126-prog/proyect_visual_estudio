@@ -1,0 +1,128 @@
+<UserControl x:Class="Presentacion.Vistas.InicioView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Style="{StaticResource MaterialDesignIconButton}" Command="{Binding RecargarCommand}" ToolTip="Recargar">
+                    <md:PackIcon Kind="Refresh" />
+                </Button>
+                <TextBlock Text="{Binding Saludo}" Style="{StaticResource TituloSeccion}" />
+            </DockPanel>
+
+            <md:Card Style="{StaticResource Tarjeta}" Visibility="{Binding Resumen, Converter={StaticResource NuloAVisible}, ConverterParameter=invertir}">
+                <StackPanel>
+                    <TextBlock Text="Bienvenido a SGAPE" FontSize="18" FontWeight="SemiBold" />
+                    <TextBlock Text="Empieza creando tu emprendimiento en la sección Emprendimientos. Luego registra cargos, productos y ventas." TextWrapping="Wrap" Margin="0,6,0,0" />
+                </StackPanel>
+            </md:Card>
+
+            <StackPanel Visibility="{Binding Resumen, Converter={StaticResource NuloAVisible}}">
+                <TextBlock Text="{Binding Resumen.Nombre}" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10" />
+                <UniformGrid Columns="4">
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Ventas de hoy" Style="{StaticResource EtiquetaKpi}" />
+                            <TextBlock Text="{Binding Ventas.Hoy, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" />
+                        </StackPanel>
+                    </md:Card>
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Ventas del mes" Style="{StaticResource EtiquetaKpi}" />
+                            <TextBlock Text="{Binding Ventas.EsteMes, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" />
+                        </StackPanel>
+                    </md:Card>
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Balance (ingresos - gastos)" Style="{StaticResource EtiquetaKpi}" />
+                            <TextBlock Text="{Binding Resumen.Balance, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}"
+                                       Foreground="{Binding Resumen.Balance, Converter={StaticResource EstadoAColor}}" />
+                        </StackPanel>
+                    </md:Card>
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Nómina mensual" Style="{StaticResource EtiquetaKpi}" />
+                            <TextBlock Text="{Binding Resumen.NominaMensual, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" />
+                        </StackPanel>
+                    </md:Card>
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Trabajadores activos" Style="{StaticResource EtiquetaKpi}" />
+                            <TextBlock Text="{Binding Resumen.TrabajadoresActivos}" Style="{StaticResource ValorKpi}" />
+                        </StackPanel>
+                    </md:Card>
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Productos" Style="{StaticResource EtiquetaKpi}" />
+                            <TextBlock Text="{Binding Resumen.Productos}" Style="{StaticResource ValorKpi}" />
+                        </StackPanel>
+                    </md:Card>
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Ventas del mes (cantidad)" Style="{StaticResource EtiquetaKpi}" />
+                            <TextBlock Text="{Binding Resumen.VentasDelMes}" Style="{StaticResource ValorKpi}" />
+                        </StackPanel>
+                    </md:Card>
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Hojas de vida nuevas" Style="{StaticResource EtiquetaKpi}" />
+                            <TextBlock Text="{Binding Resumen.PostulacionesNuevas}" Style="{StaticResource ValorKpi}" />
+                        </StackPanel>
+                    </md:Card>
+                </UniformGrid>
+
+                <Grid Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <md:Card Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Productos con stock bajo" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <DataGrid ItemsSource="{Binding StockBajo}" Style="{StaticResource Tabla}" MaxHeight="260">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Producto" Binding="{Binding Nombre}" Width="*" />
+                                    <DataGridTextColumn Header="Stock" Binding="{Binding Stock}" />
+                                    <DataGridTextColumn Header="Mínimo" Binding="{Binding StockMinimo}" />
+                                    <DataGridTextColumn Header="Faltan" Binding="{Binding Faltante}" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </md:Card>
+                    <md:Card Grid.Column="1" Style="{StaticResource Tarjeta}">
+                        <StackPanel>
+                            <TextBlock Text="Presupuestos en alerta este mes" FontWeight="SemiBold" Margin="0,0,0,8" />
+                            <DataGrid ItemsSource="{Binding Alertas}" Style="{StaticResource Tabla}" MaxHeight="260">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Categoría" Binding="{Binding Categoria}" Width="*" />
+                                    <DataGridTextColumn Header="Uso" Binding="{Binding PorcentajeUso, Converter={StaticResource Porcentaje}}" />
+                                    <DataGridTemplateColumn Header="Estado">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Estado}" FontWeight="SemiBold" Foreground="{Binding Estado, Converter={StaticResource EstadoAColor}}" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </md:Card>
+                </Grid>
+            </StackPanel>
+
+            <TextBlock Text="Todos mis emprendimientos" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,8" />
+            <DataGrid ItemsSource="{Binding Todos}" Style="{StaticResource Tabla}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="Emprendimiento" Binding="{Binding Nombre}" Width="2*" />
+                    <DataGridTextColumn Header="Sector" Binding="{Binding Sector}" Width="*" />
+                    <DataGridTextColumn Header="Trabajadores" Binding="{Binding TrabajadoresActivos}" />
+                    <DataGridTextColumn Header="Productos" Binding="{Binding Productos}" />
+                    <DataGridTextColumn Header="Stock bajo" Binding="{Binding ProductosStockBajo}" />
+                    <DataGridTextColumn Header="Ventas del mes" Binding="{Binding VentasDelMes}" />
+                    <DataGridTextColumn Header="Balance" Binding="{Binding Balance, Converter={StaticResource Moneda}}" />
+                </DataGrid.Columns>
+            </DataGrid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,66 +1,76 @@
-# SGAPE
+# SGAPE v2
 
-**Sistema de Gestión y Administración de Emprendimientos** — aplicación de escritorio para Windows hecha en **C# / .NET (Windows Forms)** con **arquitectura en capas**.
+**Sistema de Gestión y Administración de Emprendimientos.** Aplicación de escritorio en **WPF con Material Design** y un **bot de Telegram con Groq**. Las dos usan la misma lógica y la misma base de datos **Oracle Autonomous Database**.
 
-Universidad Popular del Cesar · Ingeniería de Sistemas · 2026
+Universidad Popular del Cesar · 2026
 
-## ¿Qué puede hacer?
+## Qué cambió frente a la versión 1
 
-| Módulo | Funciones |
+| Antes | Ahora |
 |---|---|
-| Cuenta | Registro e inicio de sesión (contraseñas con PBKDF2 + sal) |
-| Emprendimientos | Crear, editar y eliminar (con todos sus datos) |
-| Nómina | Cargos, trabajadores, deducciones (salud 4 % + pensión 4 %), nómina quincenal/mensual/neta |
-| Inventario | Productos, entradas y salidas de stock, alertas de stock bajo |
-| Ventas | Carrito, descuento automático de stock, historial y factura en texto |
-| Finanzas | Ingresos y gastos por categoría, balance e historial de movimientos |
-| Presupuestos | Límite mensual por categoría con alerta desde el 80 % |
-| Reportes | Estadísticas y reporte HTML con gráficas |
-| Asistente | Preguntas frecuentes sobre la plataforma y la administración de un negocio |
+| Windows Forms | **WPF + MaterialDesignInXamlToolkit**, con MVVM (CommunityToolkit.Mvvm) |
+| Un formulario distinto por módulo | **Una sola ventana de crear y editar** (`FormularioDialogo`) y una sola barra de Nuevo, Editar, Eliminar y Buscar (`BarraCrud`) para todos los módulos |
+| Sector, cargo y ciudad escritos a mano | **Catálogos**: sectores, cargos sugeridos por sector con salario, los **1.121 municipios DIVIPOLA** y tipos de documento, con **texto predictivo** |
+| Documento "CC: 123" en un solo texto | **Tipo y número de documento en campos separados**, validados según el tipo (CC, CE, TI, PA, PPT, PEP) |
+| Factura en .txt con cantidad total | **Factura en PDF**, sin cantidad total |
+| Reporte HTML | **Reporte en PDF** (QuestPDF). El bot también lo envía |
+| Paquetes y vistas que solo se usaban desde SQL Developer | **El programa usa todos los objetos de Oracle** (lista abajo) |
+| Venta armada en C#, paso a paso | `sp_sg_registrar_venta`: **una sola transacción** en Oracle |
+| Bot con n8n y Ollama | **Bot nuevo en C# con Groq**: function calling con herramientas fijas, corre 24/7 en una VM de Oracle Cloud |
+| Hojas de vida solo con la app | **Los aspirantes envían la hoja de vida por el bot**; queda en un BLOB de Oracle |
 
-## Arquitectura
+Se **eliminaron** de la solución el asistente de n8n, el de Ollama y los repositorios CSV.
+
+## Estructura
 
 ```
 SGAPE.slnx
-├── Entidades/      → Qué ES cada cosa (Persona, Trabajador, Producto, Venta...). Sin dependencias.
-├── Logica/         → Qué HACE el sistema (servicios, reglas de negocio, repositorios CSV).
-│   ├── Repositorios/   guardar y leer datos (RepositorioCsv<T> + uno por entidad)
-│   ├── Servicios/      un servicio por tarea (Autenticación, Nómina, Inventario, Ventas...)
-│   └── Utilidades/     validaciones, formatos, CSV seguro, rutas, sesión
-└── Presentacion/   → Lo que VE el usuario (Windows Forms, sin Designer).
-    ├── Comun/          tema, tarjetas, mensajes, VistaBase, DialogoBase
-    ├── Vistas/         una vista por módulo
-    └── Dialogos/       formularios emergentes
+├── Entidades/      Qué ES cada cosa (Persona → Trabajador / Postulacion, Producto, Venta...)
+├── Datos/          DAOs de Oracle + Abstract Factory (leen vistas, escriben tablas, llaman paquetes y procedimientos)
+├── Logica/         Servicios con las reglas de negocio + PDF (QuestPDF). Los usan la app Y el bot
+├── Presentacion/   WPF + Material Design (MVVM)
+├── BotTelegram/    Bot de Telegram (Groq), para un servidor Linux
+└── sql/            Script completo de la base de datos, datos de demostración y usuario del bot
 ```
 
-Referencias entre proyectos: `Presentacion → Logica → Entidades` (y `Presentacion → Entidades`).
-La capa de presentación **nunca** toca archivos: solo habla con `FabricaServicios`.
+## Objetos de Oracle y dónde los usa el programa
 
-### Pilares y principios aplicados
+| Objeto | Lo usa |
+|---|---|
+| `pkg_sg_nomina` (5 funciones + `listar_nomina`) | Nómina (tarjetas y pestaña Liquidación), Inicio, reporte PDF, bot `/nomina` |
+| `pkg_sg_reportes` (6 funciones + 3 procedimientos) | Finanzas, Ventas, Reportes, reporte PDF, herramientas del bot |
+| `pkg_sg_telegram` | Sección Telegram (generar código) y bot (vincular, emprendimiento activo) |
+| `sp_sg_registrar_venta` | Ventas, botón "Registrar venta" |
+| `sp_sg_mover_stock` | Inventario, botones Entrada y Salida |
+| `sp_sg_ajustar_precio_venta` | Inventario, botón "Ajustar precios" |
+| `sp_sg_productos_stock_bajo` | Inicio, reporte PDF, bot `/stock` |
+| `sp_sg_presupuestos_estado` | Presupuestos, Inicio, bot `/presupuestos` |
+| `sp_sg_resumen_emprendimiento` | Inicio, bot `/resumen` |
+| `sp_sg_contratar_postulante` | Vacantes, botón "Contratar" |
+| `sp_sg_limpiar_bitacora`, `sp_sg_cerrar_vacantes_vencidas` | Al abrir la app y cada 6 horas en el bot |
+| Las 13 vistas `vw_sg_*` | Todas las listas (la app lee de vistas y escribe en tablas) |
+| Las 7 funciones `fn_sg_*` | Dentro de las vistas, los paquetes y los disparadores |
+| Los 9 disparadores `trg_sg_*` | Se activan solos con cada INSERT o UPDATE de la app o del bot |
 
-- **Abstracción**: `Persona` (clase abstracta), `RepositorioCsv<T>`, `VistaBase`, `DialogoBase`.
-- **Encapsulamiento**: propiedades con validación (`Persona`), `Producto.Stock` solo cambia con `AgregarStock/ReducirStock`.
-- **Herencia**: `Trabajador : Persona`, repositorios que heredan de `RepositorioCsv<T>`, vistas que heredan de `VistaBase`.
-- **Polimorfismo**: `Persona.TipoPersona`, `Serializar/Deserializar` de cada repositorio, `Recargar()` de cada vista.
-- **SRP (una clase, una misión)**: cada servicio y cada vista tiene una única razón para cambiar.
-- **Bajo acoplamiento / alta cohesión**: dependencias entregadas por constructor y ensambladas solo en `FabricaServicios`.
+## Validaciones en tres capas
 
-## Datos
+1. **Interfaz**: campos obligatorios, solo números en montos y cantidades, listas cerradas.
+2. **Lógica** (`Validar`): formato de documento según su tipo, correo, celular, nombres con solo letras, fechas no futuras, montos mayores que cero, duplicados, que cada registro pertenezca al emprendimiento.
+3. **Oracle**: `CHECK`, `UNIQUE`, llaves foráneas y disparadores (documento, categoría coherente con el tipo, cargo del mismo emprendimiento, vacante abierta).
 
-Se guardan en archivos CSV en `%LOCALAPPDATA%\SGAPE\datos`. Las facturas y reportes se crean en `Documentos\SGAPE`.
-Desinstalar la aplicación **no** borra tus datos.
+## Cómo ponerlo en marcha
 
-## Compilar y ejecutar
+1. **Base de datos.** En SQL Developer, conectado a tu Autonomous Database:
+   - Si tienes la versión 1, ejecuta `sql/00_borrar_todo.sql`. **Esto borra todos los datos.**
+   - Ejecuta `sql/sgape_v2_completo.sql` con **F5**. La parte 8 debe mostrar todo en VALID y las pruebas en OK.
+   - Opcional: `sql/sgape_v2_datos_demo.sql` crea el usuario `demo@sgape.co` con la contraseña `Demo2026`.
+   - Para el bot: `sql/sgape_v2_usuario_bot.sql`. Antes de ejecutarlo, cambia la clave que trae.
+2. **Aplicación.** Copia `sql/conexion.ejemplo.json` a `%LOCALAPPDATA%\SGAPE\conexion.json` y llénalo. Abre `SGAPE.slnx` en Visual Studio 2022 (17.14 o superior, con .NET 10). Pon **Presentacion** como proyecto de inicio y pulsa **F5**.
+3. **Bot.** Sigue `BotTelegram/DESPLIEGUE.md`.
 
-1. Visual Studio Community con la carga de trabajo **Desarrollo de escritorio con .NET**.
-2. Abrir `SGAPE.slnx`, establecer **Presentacion** como proyecto de inicio y pulsar **F5**.
+## Seguridad
 
-## Generar el instalador
-
-1. Doble clic en `publicar.bat` → crea `Publicado\SGAPE.exe` (incluye .NET; no hay que instalarlo aparte).
-2. Abrir `Instalador\SGAPE.iss` con [Inno Setup](https://jrsoftware.org/isinfo.php) y pulsar **Compile**.
-3. El instalador queda en `Instalador\Salida\`.
-
-## Autores
-
-Alejandro Henríquez Quinchia y colaboradores · Universidad Popular del Cesar
+- `conexion.json`, el wallet, el token de Telegram y la clave de Groq **nunca** van al repositorio (`.gitignore`).
+- El bot usa el usuario `SGAPE_BOT` con permisos mínimos, no `ADMIN`.
+- El modelo de IA **no escribe SQL**. Solo puede pedir 12 herramientas fijas, y siempre sobre el emprendimiento del chat vinculado. Registrar un ingreso o un gasto pide confirmación con un botón.
+- Las hojas de vida exigen la **autorización de tratamiento de datos (Ley 1581 de 2012)**. Además, `CHECK (autoriza_datos = 'S')` en Oracle.

@@ -1,60 +1,65 @@
 using System;
 using Datos;
 using Logica.Servicios;
-using Logica.Utilidades;
 
 namespace Logica
 {
     /// <summary>
-    /// UNA SOLA MISION: armar todas las piezas y conectarlas entre si (inyeccion de dependencias manual).
-    /// La capa de Presentacion solo conoce esta clase y los servicios; nunca los DAOs.
-    /// Los DAOs se piden a una FabricaDao (Oracle, segun conexion.json); los servicios solo ven interfaces.
+    /// UNA SOLA MISION: armar todas las piezas (inyeccion de dependencias manual).
+    /// La aplicacion de escritorio y el bot de Telegram usan ESTA MISMA fabrica, asi que comparten
+    /// todas las reglas de negocio y todos los objetos de Oracle.
     /// </summary>
     public class FabricaServicios
     {
         public ServicioAutenticacion Autenticacion { get; }
+        public ServicioCatalogos Catalogos { get; }
         public ServicioEmprendimientos Emprendimientos { get; }
         public ServicioNomina Nomina { get; }
-        public ServicioFinanzas Finanzas { get; }
-        public ServicioPresupuestos Presupuestos { get; }
         public ServicioInventario Inventario { get; }
         public ServicioVentas Ventas { get; }
-        public ServicioFacturas Facturas { get; }
+        public ServicioFinanzas Finanzas { get; }
+        public ServicioPresupuestos Presupuestos { get; }
+        public ServicioVacantes Vacantes { get; }
         public ServicioReportes Reportes { get; }
-        public ServicioAsistente Asistente { get; }
-        public ServicioAsistenteN8n AsistenteNube { get; }
+        public ServicioTelegram Telegram { get; }
 
-        public FabricaServicios()
+        private readonly IReporteDao _reportes;
+
+        public FabricaServicios() : this(ConfiguracionBD.Cargar())
         {
-            // Si no hay conexion.json o Oracle no responde, esto lanza ReglaDeNegocioException y Program.cs la muestra.
-            FabricaDao fabricaDao = FabricaDao.Crear(ConfiguracionBD.Cargar());
+        }
+
+        public FabricaServicios(ConfiguracionBD configuracion)
+        {
+            // Si no hay conexion o faltan objetos de Oracle, lanza ReglaDeNegocioException con el motivo.
+            FabricaDao fabricaDao = FabricaDao.Crear(configuracion);
             fabricaDao.Verificar();
 
-            IUsuarioDao usuarios = fabricaDao.CrearUsuarioDao();
-            IEmprendimientoDao emprendimientos = fabricaDao.CrearEmprendimientoDao();
-            ICargoDao cargos = fabricaDao.CrearCargoDao();
-            ITrabajadorDao trabajadores = fabricaDao.CrearTrabajadorDao();
             IProductoDao productos = fabricaDao.CrearProductoDao();
-            IVentaDao ventas = fabricaDao.CrearVentaDao();
-            IMovimientoDao movimientos = fabricaDao.CrearMovimientoDao();
-            IPresupuestoDao presupuestos = fabricaDao.CrearPresupuestoDao();
-            IEstadisticaDao estadisticas = fabricaDao.CrearEstadisticaDao();
+            ICargoDao cargos = fabricaDao.CrearCargoDao();
+            _reportes = fabricaDao.CrearReporteDao();
 
-            // Mantenimiento: el procedimiento sp_sg_limpiar_bitacora borra los registros de bitacora de mas de un año.
-            try { estadisticas.LimpiarBitacora(365); }
-            catch (Exception) { /* es un extra: si falla, el programa sigue funcionando */ }
+            Autenticacion = new ServicioAutenticacion(fabricaDao.CrearUsuarioDao());
+            Catalogos = new ServicioCatalogos(fabricaDao.CrearCatalogoDao(), productos);
+            Emprendimientos = new ServicioEmprendimientos(fabricaDao.CrearEmprendimientoDao(), _reportes);
+            Nomina = new ServicioNomina(cargos, fabricaDao.CrearTrabajadorDao(), _reportes, Catalogos);
+            Inventario = new ServicioInventario(productos);
+            Ventas = new ServicioVentas(fabricaDao.CrearVentaDao(), productos, _reportes);
+            Finanzas = new ServicioFinanzas(fabricaDao.CrearMovimientoDao(), _reportes, Catalogos);
+            Presupuestos = new ServicioPresupuestos(fabricaDao.CrearPresupuestoDao(), Catalogos);
+            Vacantes = new ServicioVacantes(fabricaDao.CrearVacanteDao(), fabricaDao.CrearPostulacionDao(), cargos, Catalogos);
+            Reportes = new ServicioReportes(_reportes, Ventas, Inventario, Presupuestos);
+            Telegram = new ServicioTelegram(fabricaDao.CrearTelegramDao());
+        }
 
-            Autenticacion = new ServicioAutenticacion(usuarios);
-            Finanzas = new ServicioFinanzas(movimientos, estadisticas);
-            Presupuestos = new ServicioPresupuestos(presupuestos, Finanzas);
-            Emprendimientos = new ServicioEmprendimientos(emprendimientos, cargos, trabajadores, productos, ventas, movimientos, presupuestos);
-            Nomina = new ServicioNomina(cargos, trabajadores, estadisticas);
-            Inventario = new ServicioInventario(productos, Finanzas);
-            Ventas = new ServicioVentas(ventas, productos, Finanzas);
-            Facturas = new ServicioFacturas();
-            Reportes = new ServicioReportes(Ventas, Inventario, Finanzas);
-            Asistente = new ServicioAsistente();
-            AsistenteNube = new ServicioAsistenteN8n(Asistente);
+        /// <summary>
+        /// Mantenimiento con procedimientos de Oracle: sp_sg_limpiar_bitacora (registros de mas de un año)
+        /// y sp_sg_cerrar_vacantes_vencidas. Es un extra: si falla, el programa sigue.
+        /// </summary>
+        public void Mantenimiento()
+        {
+            try { _reportes.LimpiarBitacora(365); } catch (Exception) { }
+            try { _reportes.CerrarVacantesVencidas(); } catch (Exception) { }
         }
     }
 }

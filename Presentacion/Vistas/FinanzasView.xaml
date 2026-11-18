@@ -1,0 +1,55 @@
+<UserControl x:Class="Presentacion.Vistas.FinanzasView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Text="Finanzas" Style="{StaticResource TituloSeccion}" />
+
+        <!-- pkg_sg_reportes.total_ingresos / total_gastos / utilidad -->
+        <UniformGrid DockPanel.Dock="Top" Columns="3">
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Ingresos" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding Resumen.TotalIngresos, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" Foreground="#2E7D32" /></StackPanel>
+            </md:Card>
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Gastos" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding Resumen.TotalGastos, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" Foreground="#C62828" /></StackPanel>
+            </md:Card>
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Balance" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding Resumen.Balance, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}"
+                               Foreground="{Binding Resumen.Balance, Converter={StaticResource EstadoAColor}}" /></StackPanel>
+            </md:Card>
+        </UniformGrid>
+
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12" LastChildFill="False">
+            <Button DockPanel.Dock="Left" Style="{StaticResource BotonPrincipal}" Command="{Binding NuevoIngresoCommand}">
+                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Plus" /><TextBlock Text="Nuevo ingreso" Margin="6,0,0,0" /></StackPanel>
+            </Button>
+            <Button DockPanel.Dock="Left" Style="{StaticResource BotonPrincipal}" Command="{Binding NuevoGastoCommand}">
+                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Minus" /><TextBlock Text="Nuevo gasto" Margin="6,0,0,0" /></StackPanel>
+            </Button>
+            <Button DockPanel.Dock="Left" Style="{StaticResource BotonBarra}" Command="{Binding EliminarCommand}">
+                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="DeleteOutline" /><TextBlock Text="Eliminar" Margin="6,0,0,0" /></StackPanel>
+            </Button>
+            <ComboBox DockPanel.Dock="Right" Width="160" ItemsSource="{Binding Filtros}" SelectedItem="{Binding Filtro}"
+                      Style="{StaticResource MaterialDesignOutlinedComboBox}" md:HintAssist.Hint="Mostrar" />
+        </DockPanel>
+
+        <DataGrid ItemsSource="{Binding Movimientos}" SelectedItem="{Binding Seleccionado}" Style="{StaticResource Tabla}">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, Converter={StaticResource Fecha}, ConverterParameter=hora}" />
+                <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" />
+                <DataGridTextColumn Header="Categoría" Binding="{Binding Categoria}" Width="*" />
+                <DataGridTextColumn Header="Descripción" Binding="{Binding Descripcion}" Width="2*" />
+                <DataGridTemplateColumn Header="Monto">
+                    <DataGridTemplateColumn.CellTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Monto, Converter={StaticResource Moneda}}" FontWeight="SemiBold" />
+                        </DataTemplate>
+                    </DataGridTemplateColumn.CellTemplate>
+                </DataGridTemplateColumn>
+            </DataGrid.Columns>
+        </DataGrid>
+    </DockPanel>
+</UserControl>
