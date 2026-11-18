@@ -1,7 +1,9 @@
 ; ============================================================
 ;  SGAPE - Script del instalador (Inno Setup 6)
-;  1) Ejecuta publicar.bat (genera Publicado\SGAPE.exe)
-;  2) Abre este archivo con Inno Setup y pulsa "Compile" (Ctrl+F9)
+;  Lo mas facil: ejecuta crear_instalador.bat (hace todo).
+;  A mano: 1) Instalador\preparar.ps1 (carpeta Distribucion con la conexion)
+;          2) publicar.bat (genera Publicado\SGAPE.exe)
+;          3) Abre este archivo con Inno Setup y pulsa "Compile" (Ctrl+F9)
 ;  3) El instalador queda en Instalador\Salida\SGAPE-Instalador-2.0.0.exe
 ; ============================================================
 
@@ -36,6 +38,9 @@ Name: "iconoescritorio"; Description: "Crear un acceso directo en el escritorio"
 
 [Files]
 Source: "..\Publicado\SGAPE.exe"; DestDir: "{app}"; Flags: ignoreversion
+; Conexion a Oracle (usuario limitado SGAPE_APP) y wallet: asi SGAPE se conecta solo en cualquier computador
+Source: "..\Distribucion\conexion.json"; DestDir: "{app}\conexion"; Flags: ignoreversion
+Source: "..\Distribucion\wallet\*"; DestDir: "{app}\conexion\wallet"; Flags: ignoreversion recursesubdirs
 
 [Icons]
 Name: "{autoprograms}\{#NombreApp}"; Filename: "{app}\SGAPE.exe"

@@ -441,3 +441,6 @@ Publicado/
 PublicadoBot/
 Instalador/Salida/
 **/Properties/launchSettings.json
+
+# Conexion y wallet que viajan dentro del instalador (crear_instalador.bat). NUNCA a Git.
+Distribucion/
