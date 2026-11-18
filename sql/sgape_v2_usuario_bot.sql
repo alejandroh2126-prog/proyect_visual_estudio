@@ -41,12 +41,22 @@ BEGIN
   -- Escritura minima
   dar('INSERT', 'SG_MOVIMIENTO');      -- ingresos y gastos confirmados con el boton
   dar('INSERT', 'SG_POSTULACION');     -- hojas de vida de los aspirantes
+  dar('SELECT', 'SG_POSTULACION');     -- /postulaciones: el dueño descarga la hoja de vida (BLOB)
+  dar('UPDATE', 'SG_POSTULACION');     -- se marca "en revisión" al abrirla
+
+  -- Clave de Groq guardada desde la aplicacion (si ya se corrio sgape_v2_configuracion.sql)
+  BEGIN
+    dar('SELECT', 'SG_CONFIGURACION');
+    dar('EXECUTE', 'SP_SG_CONFIG_GUARDAR');   -- el bot copia su GROQ_API_KEY a Oracle para la aplicacion
+  EXCEPTION WHEN OTHERS THEN
+    DBMS_OUTPUT.PUT_LINE('Aviso: falta sgape_v2_configuracion.sql (tabla sg_configuracion)');
+  END;
 
   -- Paquetes y procedimientos que usa el bot
   FOR o IN (SELECT column_value AS nombre FROM TABLE(sys.odcivarchar2list(
               'PKG_SG_NOMINA', 'PKG_SG_REPORTES', 'PKG_SG_TELEGRAM',
               'SP_SG_RESUMEN_EMPRENDIMIENTO', 'SP_SG_PRODUCTOS_STOCK_BAJO', 'SP_SG_PRESUPUESTOS_ESTADO',
-              'SP_SG_LIMPIAR_BITACORA', 'SP_SG_CERRAR_VACANTES_VENCIDAS'))) LOOP
+              'SP_SG_LIMPIAR_BITACORA', 'SP_SG_CERRAR_VACANTES_VENCIDAS', 'SP_SG_TELEGRAM_ALERTAS'))) LOOP
     dar('EXECUTE', o.nombre);
   END LOOP;
 END;

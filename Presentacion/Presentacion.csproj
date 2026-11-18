@@ -6,7 +6,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Interfaz Material Design para WPF y MVVM con generadores de codigo -->
+    <!-- Interfaz Material Design para WPF y MVVM con generadores de     codigo -->
     <PackageReference Include="MaterialDesignThemes" Version="5.*" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.*" />
   </ItemGroup>

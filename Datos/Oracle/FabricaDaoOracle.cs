@@ -23,5 +23,6 @@ namespace Datos.Oracle
         public override IPostulacionDao CrearPostulacionDao() { return new PostulacionDaoOracle(); }
         public override IReporteDao CrearReporteDao() { return new ReporteDaoOracle(); }
         public override ITelegramDao CrearTelegramDao() { return new TelegramDaoOracle(); }
+        public override IConfiguracionDao CrearConfiguracionDao() { return new ConfiguracionDaoOracle(); }
     }
 }

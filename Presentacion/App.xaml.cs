@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Threading;
 using Entidades;
 using Logica;
+using Presentacion.Comun;
 using Presentacion.Ventanas;
 
 namespace Presentacion
@@ -23,7 +24,7 @@ namespace Presentacion
             try
             {
                 // Conectar a Oracle puede tardar unos segundos: se hace fuera del hilo de la interfaz.
-                Servicios = await Task.Run(() =>
+                Servicios = await Fondo.Run(() =>
                 {
                     FabricaServicios f = new FabricaServicios();
                     f.Mantenimiento();

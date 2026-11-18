@@ -10,6 +10,7 @@ El bot debe correr en un servidor y no en tu PC, porque el dueño del emprendimi
 | Clave de Groq | https://console.groq.com/keys → *Create API Key* |
 | Wallet de la base de datos | Oracle Cloud → Autonomous Database → **Database connection** → *Download wallet* |
 | Usuario `SGAPE_BOT` | Ejecuta `sql/sgape_v2_usuario_bot.sql` (cambia la clave antes) |
+| Alertas automáticas | Si tu base se creó antes del 17/11/2026, ejecuta una vez `sql/sgape_v2_alertas_bot.sql` |
 
 No pegues el token ni la clave en ningún chat, documento o repositorio. Van solo en el archivo `/etc/sgape-bot.env` de la VM.
 
@@ -48,7 +49,7 @@ sudo mv /tmp/wallet /opt/sgape-bot/wallet
 sudo chown -R sgape:sgape /opt/sgape-bot && sudo chmod 700 /opt/sgape-bot/wallet
 
 sudo mv /tmp/sgape-bot.env.ejemplo /etc/sgape-bot.env
-sudo nano /etc/sgape-bot.env          # llena TELEGRAM_BOT_TOKEN, GROQ_API_KEY y SGAPE_DB_CLAVE
+sudo nano /etc/sgape-bot.env          # llena TELEGRAM_BOT_TOKEN y SGAPE_DB_CLAVE (la clave de Groq la toma de Oracle)
 sudo chmod 600 /etc/sgape-bot.env
 
 sudo mv /tmp/sgape-bot.service /etc/systemd/system/
@@ -65,7 +66,24 @@ sudo journalctl -u sgape-bot -f        # registro en vivo
 
 En Telegram, escribe `/start` a tu bot. En la aplicación, ve a **Telegram → Generar código** y envía `/vincular 123456`.
 
-## 6. Actualizar el bot
+## 6. Qué hace el bot sin que nadie escriba
+
+Cada 15 minutos (`SGAPE_ALERTAS_MINUTOS`) revisa Oracle y avisa a los chats vinculados:
+
+- ⚠️ productos que acaban de quedar por debajo del mínimo,
+- 🟠/🔴 presupuestos que llegan al 80 % o se pasan,
+- 📄 hojas de vida nuevas (con botón para descargarlas),
+- 🌙 el cierre del día a las 19 h (`SGAPE_RESUMEN_HORA`, `-1` lo apaga).
+
+Solo avisa lo nuevo; el dueño lo apaga o enciende con `/alertas`.
+
+## 7. Probarlo en tu PC antes de subirlo
+
+En Visual Studio: clic derecho en **BotTelegram** → *Propiedades* → *Depurar* → *Abrir la interfaz de usuario de perfiles de inicio* → *Variables de entorno*, y agrega `TELEGRAM_BOT_TOKEN`, `SGAPE_DB_USUARIO`, `SGAPE_DB_CLAVE`, `SGAPE_DB_DATASOURCE` y `SGAPE_DB_WALLET` (ruta a la carpeta del wallet). Luego clic derecho en BotTelegram → *Depurar* → *Iniciar nueva instancia*. Mientras corre, responde en Telegram; al cerrarlo, deja de responder. Por eso, para que funcione con el PC apagado, va en la VM.
+
+No pongas esas variables en un archivo que se suba a Git (`launchSettings.json` está en `.gitignore`).
+
+## 8. Actualizar el bot
 
 Vuelve a compilar, sube el archivo y ejecuta:
 
@@ -84,3 +102,9 @@ sudo systemctl start sgape-bot
 | El bot no responde | `journalctl -u sgape-bot -f`. Revisa el token. Solo puede haber **una** copia del bot en marcha con el mismo token |
 | "El asistente está muy ocupado" | Se alcanzó el límite gratuito de Groq; los comandos (`/resumen`, `/stock`...) siguen funcionando porque no usan IA |
 | El PDF sale sin texto | Faltan fuentes: `sudo apt install fonts-dejavu-core` |
+
+## Clave de Groq para todos (desde el 17/11/2026)
+
+1. Ejecuta `sql/sgape_v2_configuracion.sql` como ADMIN (crea `sg_configuracion` y da lectura a SGAPE_BOT).
+2. En la aplicación, sección **Asistente**, pega la clave y pulsa **Guardar para todos**. Se prueba con Groq y se guarda en Oracle.
+3. Desde ahí, cualquier computador que abra SGAPE y el bot usan esa clave sin pedirla. `GROQ_API_KEY` en variables de entorno sigue funcionando y tiene prioridad.

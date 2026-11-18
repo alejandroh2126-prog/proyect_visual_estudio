@@ -41,16 +41,27 @@ SGAPE.slnx
 | `pkg_sg_reportes` (6 funciones + 3 procedimientos) | Finanzas, Ventas, Reportes, reporte PDF, herramientas del bot |
 | `pkg_sg_telegram` | Sección Telegram (generar código) y bot (vincular, emprendimiento activo) |
 | `sp_sg_registrar_venta` | Ventas, botón "Registrar venta" |
-| `sp_sg_mover_stock` | Inventario, botones Entrada y Salida |
+| `sp_sg_mover_stock` | Inventario, botón Editar (campo "Movimiento de stock": entrada o salida) |
 | `sp_sg_ajustar_precio_venta` | Inventario, botón "Ajustar precios" |
-| `sp_sg_productos_stock_bajo` | Inicio, reporte PDF, bot `/stock` |
-| `sp_sg_presupuestos_estado` | Presupuestos, Inicio, bot `/presupuestos` |
+| `sp_sg_productos_stock_bajo` | Inicio, reporte PDF, bot `/stock` y aviso automático de stock bajo |
+| `sp_sg_presupuestos_estado` | Finanzas (pestaña Presupuestos), Inicio, bot `/presupuestos` y alertas automáticas |
+| `sp_sg_telegram_alertas` + `vw_sg_telegram_alertas` | Bot: `/alertas` y los avisos automáticos (stock bajo, presupuestos, hojas de vida, cierre del día) |
 | `sp_sg_resumen_emprendimiento` | Inicio, bot `/resumen` |
 | `sp_sg_contratar_postulante` | Vacantes, botón "Contratar" |
 | `sp_sg_limpiar_bitacora`, `sp_sg_cerrar_vacantes_vencidas` | Al abrir la app y cada 6 horas en el bot |
-| Las 13 vistas `vw_sg_*` | Todas las listas (la app lee de vistas y escribe en tablas) |
+| Las 14 vistas `vw_sg_*` | Todas las listas (la app lee de vistas y escribe en tablas) |
 | Las 7 funciones `fn_sg_*` | Dentro de las vistas, los paquetes y los disparadores |
 | Los 9 disparadores `trg_sg_*` | Se activan solos con cada INSERT o UPDATE de la app o del bot |
+
+## Cambios del 17/11/2026
+
+- **Finanzas y Presupuestos en una sola sección.** Finanzas tiene dos pestañas: *Movimientos* (lo que entró y salió) y *Presupuestos* (el límite mensual por categoría de gasto). Cada gasto registrado mueve su presupuesto.
+- **Sin botones Entrada y Salida.** El movimiento de stock está dentro de **Editar** del producto: eliges *Entrada* o *Salida* y la cantidad.
+- **El trabajador ya no pide correo.**
+- **Errores de validación** (cédula mal escrita, etc.): solo se muestra el mensaje. Antes Visual Studio se detenía en el código porque la excepción salía de un hilo de fondo; ahora la atrapa `Fondo.Run`.
+- **Aviso falso "Primero crea un emprendimiento"** al recargar la lista: corregido.
+- **Bot con avisos automáticos**: stock bajo, presupuestos al 80 % o excedidos, hojas de vida nuevas y cierre del día a las 7 p. m. Comandos nuevos: `/ventas`, `/postulaciones` (descarga la hoja de vida) y `/alertas`.
+  Si tu base ya estaba creada, ejecuta **`sql/sgape_v2_alertas_bot.sql`** una vez.
 
 ## Validaciones en tres capas
 

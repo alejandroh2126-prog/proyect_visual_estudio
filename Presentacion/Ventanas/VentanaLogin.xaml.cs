@@ -48,7 +48,7 @@ namespace Presentacion.Ventanas
             Mensaje.Visibility = Visibility.Collapsed;
             try
             {
-                Usuario u = await Task.Run(() => registro
+                Usuario u = await Fondo.Run(() => registro
                     ? App.Servicios.Autenticacion.Registrar(nombre, correo, clave, confirmacion)
                     : App.Servicios.Autenticacion.IniciarSesion(correo, clave));
                 Sesion.Usuario = u;

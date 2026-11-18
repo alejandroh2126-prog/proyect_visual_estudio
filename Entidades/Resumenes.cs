@@ -128,4 +128,13 @@ namespace Entidades
         public int UsuarioId { get; set; }
         public string NombreUsuario { get; set; } = string.Empty;
     }
+
+    /// <summary>Un chat que recibe avisos automaticos del bot (vista vw_sg_telegram_alertas).</summary>
+    public class ChatAlerta
+    {
+        public long ChatId { get; set; }
+        public int UsuarioId { get; set; }
+        public int EmprendimientoId { get; set; }
+        public string Emprendimiento { get; set; } = string.Empty;
+    }
 }

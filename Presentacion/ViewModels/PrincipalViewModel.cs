@@ -49,9 +49,10 @@ namespace Presentacion.ViewModels
                 new Seccion("Vacantes", PackIconKind.BriefcaseAccountOutline, new VacantesViewModel()),
                 new Seccion("Inventario", PackIconKind.PackageVariantClosed, new InventarioViewModel()),
                 new Seccion("Ventas", PackIconKind.CartOutline, new VentasViewModel()),
+                // Finanzas incluye Presupuestos (pestaña): los dos son plata que entra y sale del mismo emprendimiento
                 new Seccion("Finanzas", PackIconKind.CashMultiple, new FinanzasViewModel()),
-                new Seccion("Presupuestos", PackIconKind.ChartDonut, new PresupuestosViewModel()),
                 new Seccion("Reportes", PackIconKind.FilePdfBox, new ReportesViewModel()),
+                new Seccion("Asistente", PackIconKind.RobotOutline, new AsistenteViewModel()),
                 new Seccion("Telegram", PackIconKind.SendCircleOutline, new TelegramViewModel(), false)
             };
         }
@@ -65,22 +66,32 @@ namespace Presentacion.ViewModels
         /// <summary>Vuelve a leer los emprendimientos (al crear, editar o eliminar uno).</summary>
         public async Task RecargarEmprendimientos()
         {
+            _recargando = true;
+            int? elegido = EmprendimientoActual?.Id;
             await Ejecutar(async () =>
             {
-                int? elegido = EmprendimientoActual?.Id;
-                List<Emprendimiento> lista = await Task.Run(() => App.Servicios.Emprendimientos.Listar(Sesion.IdUsuario));
+                List<Emprendimiento> lista = await Fondo.Run(() => App.Servicios.Emprendimientos.Listar(Sesion.IdUsuario));
                 Emprendimientos.Clear();
                 foreach (Emprendimiento e in lista) Emprendimientos.Add(e);
                 SinEmprendimientos = lista.Count == 0;
 
                 Emprendimiento? nuevo = null;
                 foreach (Emprendimiento e in lista) if (e.Id == elegido) nuevo = e;
+                _recargando = false;
                 EmprendimientoActual = nuevo ?? (lista.Count > 0 ? lista[0] : null);
             });
+            _recargando = false;
         }
+
+        /// <summary>
+        /// Mientras se vuelve a leer la lista, el selector queda vacio un instante (Clear).
+        /// Sin esta bandera salia el aviso falso "Primero crea un emprendimiento".
+        /// </summary>
+        private bool _recargando;
 
         partial void OnEmprendimientoActualChanged(Emprendimiento? value)
         {
+            if (_recargando) return;
             Sesion.Emprendimiento = value;
             // Solo se recarga la seccion si cambio el emprendimiento (no cuando se vuelve a leer la misma lista).
             if (value?.Id == _idCargado) return;

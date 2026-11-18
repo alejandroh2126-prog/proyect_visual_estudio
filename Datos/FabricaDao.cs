@@ -21,6 +21,7 @@ namespace Datos
         public abstract IPostulacionDao CrearPostulacionDao();
         public abstract IReporteDao CrearReporteDao();
         public abstract ITelegramDao CrearTelegramDao();
+        public abstract IConfiguracionDao CrearConfiguracionDao();
 
         /// <summary>Comprueba que la base de datos esta lista. Lanza ReglaDeNegocioException si no.</summary>
         public abstract void Verificar();

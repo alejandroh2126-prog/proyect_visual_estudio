@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Entidades;
 using Logica;
+using Logica.IA;
 using Logica.Servicios;
 using Logica.Utilidades;
 
@@ -110,7 +111,8 @@ namespace BotTelegram
             catch (Exception ex)
             {
                 Console.Error.WriteLine(DateTime.Now.ToString("s") + " ERROR chat " + chatId + ": " + ex);
-                await _tg.EnviarMensaje(chatId, "Ocurrió un error. Inténtalo de nuevo en unos segundos.", null, ct);
+                string detalle = ex.Message.Length > 300 ? ex.Message.Substring(0, 300) : ex.Message;
+                await _tg.EnviarMensaje(chatId, "Ocurrió un error. Inténtalo de nuevo en unos segundos.\n\nDetalle técnico: " + detalle, null, ct);
             }
         }
 
@@ -195,6 +197,15 @@ namespace BotTelegram
                 case "/nomina":
                     await Nomina(ctx, ct);
                     return;
+                case "/ventas":
+                    await VentasDeHoy(ctx, ct);
+                    return;
+                case "/postulaciones":
+                    await Postulaciones(ctx, ct);
+                    return;
+                case "/alertas":
+                    await Alertas(ctx, argumento, ct);
+                    return;
                 case "":
                     await Preguntar(ctx, texto, ct);
                     return;
@@ -266,10 +277,15 @@ namespace BotTelegram
                 sb.AppendLine("/stock - productos con stock bajo");
                 sb.AppendLine("/presupuestos - presupuestos del mes");
                 sb.AppendLine("/nomina - nómina del mes");
+                sb.AppendLine("/ventas - ventas de hoy");
+                sb.AppendLine("/postulaciones - hojas de vida por revisar");
+                sb.AppendLine("/alertas - activar o desactivar los avisos automáticos");
                 sb.AppendLine("/emprendimientos - cambiar de emprendimiento");
                 sb.AppendLine("/desvincular - desvincular este chat");
                 sb.AppendLine();
-                sb.Append("También puedes preguntarme, por ejemplo: \"¿cuánto vendí esta semana?\" o \"registra un gasto de 50000 en transporte\".");
+                sb.AppendLine("También puedes preguntarme, por ejemplo: \"¿cuánto vendí esta semana?\" o \"registra un gasto de 50000 en transporte\".");
+                sb.AppendLine();
+                sb.Append("🔔 Sin que escribas nada te aviso del stock bajo, los presupuestos al 80 %, las hojas de vida nuevas y el cierre de cada día.");
             }
             else
             {
@@ -298,20 +314,62 @@ namespace BotTelegram
 
         private async Task Resumen(ContextoChat ctx, CancellationToken ct)
         {
-            ResumenEmprendimiento r = _s.Reportes.Resumen(ctx.Emprendimiento.Id);
-            ResumenVentas v = _s.Ventas.Resumen(ctx.Emprendimiento.Id);
-            string texto =
-                "📊 " + r.Nombre + "\n\n" +
-                "Ventas hoy: " + Formato.Moneda(v.Hoy) + "\n" +
-                "Ventas 7 días: " + Formato.Moneda(v.UltimosSieteDias) + "\n" +
-                "Ventas del mes: " + Formato.Moneda(v.EsteMes) + " (" + r.VentasDelMes + " ventas)\n\n" +
-                "Ingresos: " + Formato.Moneda(r.Ingresos) + "\n" +
-                "Gastos: " + Formato.Moneda(r.Gastos) + "\n" +
-                "Balance: " + Formato.Moneda(r.Balance) + "\n\n" +
-                "Trabajadores activos: " + r.TrabajadoresActivos + " · Nómina: " + Formato.Moneda(r.NominaMensual) + "\n" +
-                "Productos: " + r.Productos + " · Con stock bajo: " + r.ProductosStockBajo + "\n" +
-                "Hojas de vida nuevas: " + r.PostulacionesNuevas;
-            await _tg.EnviarMensaje(ctx.ChatId, texto, null, ct);
+            await _tg.EnviarMensaje(ctx.ChatId, Textos.Resumen(_s, ctx.Emprendimiento.Id), null, ct);
+        }
+
+        /// <summary>/alertas: activa o desactiva los avisos automaticos (sp_sg_telegram_alertas).</summary>
+        private async Task Alertas(ContextoChat ctx, string argumento, CancellationToken ct)
+        {
+            string a = argumento.Trim().ToLowerInvariant();
+            bool? activar = a == "on" || a == "si" || a == "sí" ? true : a == "off" || a == "no" ? false : (bool?)null;
+            bool activas = _s.Telegram.CambiarAlertas(ctx.ChatId, activar);
+            await _tg.EnviarMensaje(ctx.ChatId, activas
+                ? "🔔 Alertas ACTIVADAS. Te aviso cuando un producto quede con stock bajo, cuando un presupuesto llegue al 80 % o se pase, " +
+                  "cuando llegue una hoja de vida y cada noche con el cierre del día."
+                : "🔕 Alertas desactivadas. Escribe /alertas para volver a activarlas.", null, ct);
+        }
+
+        /// <summary>/ventas: las ventas de hoy, una por linea.</summary>
+        private async Task VentasDeHoy(ContextoChat ctx, CancellationToken ct)
+        {
+            List<Venta> hoy = _s.Ventas.Listar(ctx.Emprendimiento.Id).FindAll(v => v.Fecha.Date == DateTime.Today);
+            if (hoy.Count == 0) { await _tg.EnviarMensaje(ctx.ChatId, "Hoy todavía no hay ventas registradas.", null, ct); return; }
+            decimal total = 0m;
+            StringBuilder sb = new StringBuilder("🛒 Ventas de hoy:\n\n");
+            int n = 0;
+            foreach (Venta v in hoy)
+            {
+                total += v.Total;
+                if (++n <= 20) sb.AppendLine("• " + v.Fecha.ToString("HH:mm") + "  #" + v.Id + "  " + v.Productos + " producto(s)  " + Formato.Moneda(v.Total));
+            }
+            if (hoy.Count > 20) sb.AppendLine("… y " + (hoy.Count - 20) + " más.");
+            sb.AppendLine().Append("Total: " + Formato.Moneda(total) + " en " + hoy.Count + " venta(s).");
+            await _tg.EnviarMensaje(ctx.ChatId, sb.ToString(), null, ct);
+        }
+
+        /// <summary>/postulaciones: hojas de vida sin revisar, con boton para descargarlas.</summary>
+        private async Task Postulaciones(ContextoChat ctx, CancellationToken ct)
+        {
+            StringBuilder sb = new StringBuilder();
+            List<List<Boton>> botones = new List<List<Boton>>();
+            foreach (Vacante v in _s.Vacantes.Listar(ctx.Emprendimiento.Id))
+                foreach (Postulacion p in _s.Vacantes.Postulaciones(ctx.Emprendimiento.Id, v.Id))
+                {
+                    if (p.Estado != EstadosPostulacion.Recibida && p.Estado != EstadosPostulacion.EnRevision) continue;
+                    sb.AppendLine("• " + p.Nombre + " " + p.Apellido + " → " + v.Titulo + " (" + Formato.Fecha(p.Fecha) + ")");
+                    if (botones.Count < 10) botones.Add(new List<Boton> { new Boton("📄 " + p.Nombre + " " + p.Apellido, "cv:" + p.Id) });
+                }
+            if (sb.Length == 0) { await _tg.EnviarMensaje(ctx.ChatId, "No hay hojas de vida pendientes.", null, ct); return; }
+            await _tg.EnviarMensaje(ctx.ChatId, "📄 Hojas de vida por revisar:\n\n" + sb + "\nToca un nombre para recibir el archivo. Para contratar, usa la sección Vacantes de la aplicación.", botones, ct);
+        }
+
+        private async Task EnviarHojaDeVida(long chatId, int postulacionId, CancellationToken ct)
+        {
+            ContextoChat? ctx = Contexto(chatId);
+            if (ctx == null) { await Ayuda(chatId, ct); return; }
+            // HojaDeVida comprueba que la postulacion sea del emprendimiento del chat y la marca "en revision"
+            ArchivoCv cv = _s.Vacantes.HojaDeVida(ctx.Emprendimiento.Id, postulacionId);
+            await _tg.EnviarDocumento(chatId, cv.Contenido, cv.Nombre, "Hoja de vida", ct);
         }
 
         private async Task EnviarReporte(ContextoChat ctx, CancellationToken ct)
@@ -402,6 +460,10 @@ namespace BotTelegram
 
                 case "vac":
                     if (int.TryParse(valor, out int vacante)) await IniciarPostulacion(chatId, vacante, ct);
+                    return;
+
+                case "cv":
+                    if (int.TryParse(valor, out int postulacion)) await EnviarHojaDeVida(chatId, postulacion, ct);
                     return;
 
                 case "td":

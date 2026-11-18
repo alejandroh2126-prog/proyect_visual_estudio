@@ -22,6 +22,7 @@ namespace Logica
         public ServicioVacantes Vacantes { get; }
         public ServicioReportes Reportes { get; }
         public ServicioTelegram Telegram { get; }
+        public ServicioConfiguracion Configuracion { get; }
 
         private readonly IReporteDao _reportes;
 
@@ -50,6 +51,7 @@ namespace Logica
             Vacantes = new ServicioVacantes(fabricaDao.CrearVacanteDao(), fabricaDao.CrearPostulacionDao(), cargos, Catalogos);
             Reportes = new ServicioReportes(_reportes, Ventas, Inventario, Presupuestos);
             Telegram = new ServicioTelegram(fabricaDao.CrearTelegramDao());
+            Configuracion = new ServicioConfiguracion(fabricaDao.CrearConfiguracionDao());
         }
 
         /// <summary>

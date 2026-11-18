@@ -22,34 +22,44 @@
             </md:Card>
         </UniformGrid>
 
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,12" LastChildFill="False">
-            <Button DockPanel.Dock="Left" Style="{StaticResource BotonPrincipal}" Command="{Binding NuevoIngresoCommand}">
-                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Plus" /><TextBlock Text="Nuevo ingreso" Margin="6,0,0,0" /></StackPanel>
-            </Button>
-            <Button DockPanel.Dock="Left" Style="{StaticResource BotonPrincipal}" Command="{Binding NuevoGastoCommand}">
-                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Minus" /><TextBlock Text="Nuevo gasto" Margin="6,0,0,0" /></StackPanel>
-            </Button>
-            <Button DockPanel.Dock="Left" Style="{StaticResource BotonBarra}" Command="{Binding EliminarCommand}">
-                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="DeleteOutline" /><TextBlock Text="Eliminar" Margin="6,0,0,0" /></StackPanel>
-            </Button>
-            <ComboBox DockPanel.Dock="Right" Width="160" ItemsSource="{Binding Filtros}" SelectedItem="{Binding Filtro}"
-                      Style="{StaticResource MaterialDesignOutlinedComboBox}" md:HintAssist.Hint="Mostrar" />
-        </DockPanel>
+        <TabControl>
+            <TabItem Header="Movimientos">
+                <DockPanel>
+                <DockPanel DockPanel.Dock="Top" Margin="0,12,0,12" LastChildFill="False">
+                    <Button DockPanel.Dock="Left" Style="{StaticResource BotonPrincipal}" Command="{Binding NuevoIngresoCommand}">
+                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Plus" /><TextBlock Text="Nuevo ingreso" Margin="6,0,0,0" /></StackPanel>
+                    </Button>
+                    <Button DockPanel.Dock="Left" Style="{StaticResource BotonPrincipal}" Command="{Binding NuevoGastoCommand}">
+                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Minus" /><TextBlock Text="Nuevo gasto" Margin="6,0,0,0" /></StackPanel>
+                    </Button>
+                    <Button DockPanel.Dock="Left" Style="{StaticResource BotonBarra}" Command="{Binding EliminarCommand}">
+                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="DeleteOutline" /><TextBlock Text="Eliminar" Margin="6,0,0,0" /></StackPanel>
+                    </Button>
+                    <ComboBox DockPanel.Dock="Right" Width="160" ItemsSource="{Binding Filtros}" SelectedItem="{Binding Filtro}"
+                              Style="{StaticResource MaterialDesignOutlinedComboBox}" md:HintAssist.Hint="Mostrar" />
+                </DockPanel>
 
-        <DataGrid ItemsSource="{Binding Movimientos}" SelectedItem="{Binding Seleccionado}" Style="{StaticResource Tabla}">
-            <DataGrid.Columns>
-                <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, Converter={StaticResource Fecha}, ConverterParameter=hora}" />
-                <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" />
-                <DataGridTextColumn Header="Categoría" Binding="{Binding Categoria}" Width="*" />
-                <DataGridTextColumn Header="Descripción" Binding="{Binding Descripcion}" Width="2*" />
-                <DataGridTemplateColumn Header="Monto">
-                    <DataGridTemplateColumn.CellTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding Monto, Converter={StaticResource Moneda}}" FontWeight="SemiBold" />
-                        </DataTemplate>
-                    </DataGridTemplateColumn.CellTemplate>
-                </DataGridTemplateColumn>
-            </DataGrid.Columns>
-        </DataGrid>
+                <DataGrid ItemsSource="{Binding Movimientos}" SelectedItem="{Binding Seleccionado}" Style="{StaticResource Tabla}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Fecha" Binding="{Binding Fecha, Converter={StaticResource Fecha}, ConverterParameter=hora}" />
+                        <DataGridTextColumn Header="Tipo" Binding="{Binding Tipo}" />
+                        <DataGridTextColumn Header="Categoría" Binding="{Binding Categoria}" Width="*" />
+                        <DataGridTextColumn Header="Descripción" Binding="{Binding Descripcion}" Width="2*" />
+                        <DataGridTemplateColumn Header="Monto">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Monto, Converter={StaticResource Moneda}}" FontWeight="SemiBold" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <!-- Presupuestos: el limite mensual por categoria de gasto (sp_sg_presupuestos_estado) -->
+            <TabItem Header="Presupuestos">
+                <ContentControl Content="{Binding Presupuestos}" Margin="0,12,0,0" />
+            </TabItem>
+        </TabControl>
     </DockPanel>
 </UserControl>

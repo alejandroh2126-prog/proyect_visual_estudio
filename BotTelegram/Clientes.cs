@@ -17,28 +17,33 @@ namespace BotTelegram
     public class ConfiguracionBot
     {
         public string TokenTelegram { get; private set; } = string.Empty;
-        public string ClaveGroq { get; private set; } = string.Empty;
-        public string ModeloGroq { get; private set; } = "llama-3.3-70b-versatile";
 
         /// <summary>Maximo de preguntas al modelo por chat en 10 minutos (cuida el cupo de la clave de Groq).</summary>
         public int LimitePreguntas { get; private set; } = 20;
+
+        /// <summary>Cada cuantos minutos se revisan las alertas automaticas (minimo 5).</summary>
+        public int MinutosAlertas { get; private set; } = 15;
+
+        /// <summary>Hora (0-23, Colombia) del cierre del dia. -1 lo desactiva.</summary>
+        public int HoraResumen { get; private set; } = 19;
 
         public static ConfiguracionBot Cargar()
         {
             ConfiguracionBot c = new ConfiguracionBot
             {
-                TokenTelegram = Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") ?? string.Empty,
-                ClaveGroq = Environment.GetEnvironmentVariable("GROQ_API_KEY") ?? string.Empty
+                TokenTelegram = (Environment.GetEnvironmentVariable("TELEGRAM_BOT_TOKEN") ?? string.Empty).Trim()
             };
-            string? modelo = Environment.GetEnvironmentVariable("GROQ_MODELO");
-            if (!string.IsNullOrWhiteSpace(modelo)) c.ModeloGroq = modelo.Trim();
+            // La clave y el modelo de Groq ya no son obligatorios aqui: ConfiguracionGroq los busca en
+            // GROQ_API_KEY / GROQ_MODELO y, si no estan, en Oracle (los guarda la aplicacion, seccion Asistente).
             if (int.TryParse(Environment.GetEnvironmentVariable("SGAPE_LIMITE_PREGUNTAS"), out int limite) && limite > 0)
                 c.LimitePreguntas = limite;
+            if (int.TryParse(Environment.GetEnvironmentVariable("SGAPE_ALERTAS_MINUTOS"), out int minutos) && minutos >= 5)
+                c.MinutosAlertas = minutos;
+            if (int.TryParse(Environment.GetEnvironmentVariable("SGAPE_RESUMEN_HORA"), out int hora) && hora >= -1 && hora <= 23)
+                c.HoraResumen = hora;
 
             if (string.IsNullOrWhiteSpace(c.TokenTelegram))
                 throw new InvalidOperationException("Falta la variable de entorno TELEGRAM_BOT_TOKEN.");
-            if (string.IsNullOrWhiteSpace(c.ClaveGroq))
-                throw new InvalidOperationException("Falta la variable de entorno GROQ_API_KEY.");
             return c;
         }
     }
@@ -137,7 +142,9 @@ namespace BotTelegram
             foreach ((string c, string d) in new[]
             {
                 ("resumen", "Resumen del emprendimiento"), ("reporte", "Reporte en PDF"), ("stock", "Productos con stock bajo"),
-                ("presupuestos", "Presupuestos del mes"), ("nomina", "Nómina"), ("emprendimientos", "Cambiar de emprendimiento"),
+                ("presupuestos", "Presupuestos del mes"), ("nomina", "Nómina"), ("ventas", "Ventas de hoy"),
+                ("postulaciones", "Hojas de vida por revisar"), ("alertas", "Activar o desactivar avisos"),
+                ("emprendimientos", "Cambiar de emprendimiento"),
                 ("vacantes", "Ver vacantes y enviar hoja de vida"), ("vincular", "Vincular tu cuenta de SGAPE"),
                 ("ayuda", "Ayuda"), ("cancelar", "Cancelar lo que estás haciendo")
             })
@@ -168,60 +175,4 @@ namespace BotTelegram
     // =====================================================================
     // GROQ (API compatible con OpenAI: /chat/completions con herramientas)
     // =====================================================================
-
-    public class GroqCliente
-    {
-        private readonly HttpClient _http;
-        private readonly string _modelo;
-
-        public GroqCliente(string clave, string modelo)
-        {
-            _modelo = modelo;
-            _http = new HttpClient { BaseAddress = new Uri("https://api.groq.com/openai/v1/"), Timeout = TimeSpan.FromSeconds(60) };
-            _http.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", clave);
-        }
-
-        /// <summary>Devuelve el mensaje del asistente (puede traer tool_calls).</summary>
-        public async Task<JsonObject> Completar(JsonArray mensajes, JsonArray herramientas, CancellationToken ct)
-        {
-            JsonObject cuerpo = new JsonObject
-            {
-                ["model"] = _modelo,
-                ["messages"] = mensajes.DeepClone(),
-                ["tools"] = herramientas.DeepClone(),
-                ["tool_choice"] = "auto",
-                ["temperature"] = 0.2,
-                ["max_tokens"] = 900
-            };
-            using StringContent contenido = new StringContent(cuerpo.ToJsonString(), Encoding.UTF8, "application/json");
-            using HttpResponseMessage r = await _http.PostAsync("chat/completions", contenido, ct);
-            string texto = await r.Content.ReadAsStringAsync(ct);
-            if ((int)r.StatusCode == 429)
-                throw new LimiteGroqException();
-            if (!r.IsSuccessStatusCode)
-                throw new InvalidOperationException("Groq respondió " + (int)r.StatusCode + ": " + Recortar(texto, 300));
-
-            JsonNode? json = JsonNode.Parse(texto);
-            return json?["choices"]?[0]?["message"] as JsonObject
-                   ?? throw new InvalidOperationException("Groq no devolvió respuesta.");
-        }
-
-        private static string Recortar(string s, int n) { return s.Length <= n ? s : s.Substring(0, n); }
-    }
-
-    public class LimiteGroqException : Exception
-    {
-        public LimiteGroqException() : base("Se alcanzó el límite de uso de Groq.") { }
-    }
-
-    internal static class Json
-    {
-        public static readonly JsonSerializerOptions Opciones = new JsonSerializerOptions
-        {
-            PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-        };
-
-        public static string Texto(object o) { return JsonSerializer.Serialize(o, Opciones); }
-    }
 }

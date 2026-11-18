@@ -74,6 +74,7 @@
             <DataTemplate DataType="{x:Type vm:FinanzasViewModel}"><v:FinanzasView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:PresupuestosViewModel}"><v:PresupuestosView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:ReportesViewModel}"><v:ReportesView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AsistenteViewModel}"><v:AsistenteView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:TelegramViewModel}"><v:TelegramView /></DataTemplate>
             <DataTemplate DataType="{x:Type c:FormularioViewModel}"><c:FormularioDialogo /></DataTemplate>
             <DataTemplate DataType="{x:Type c:ConfirmacionViewModel}"><c:ConfirmacionDialogo /></DataTemplate>

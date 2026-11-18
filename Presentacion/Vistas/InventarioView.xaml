@@ -18,17 +18,10 @@
 
         <v:BarraCrud DockPanel.Dock="Top">
             <v:BarraCrud.Extra>
-                <StackPanel Orientation="Horizontal">
-                    <Button Style="{StaticResource BotonBarra}" Command="{Binding EntradaCommand}">
-                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="PackageDown" /><TextBlock Text="Entrada" Margin="6,0,0,0" /></StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource BotonBarra}" Command="{Binding SalidaCommand}">
-                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="PackageUp" /><TextBlock Text="Salida" Margin="6,0,0,0" /></StackPanel>
-                    </Button>
-                    <Button Style="{StaticResource BotonBarra}" Command="{Binding AjustarPreciosCommand}">
-                        <StackPanel Orientation="Horizontal"><md:PackIcon Kind="PercentOutline" /><TextBlock Text="Ajustar precios" Margin="6,0,0,0" /></StackPanel>
-                    </Button>
-                </StackPanel>
+                <!-- Entrada y Salida de stock ahora estan dentro de Editar -->
+                <Button Style="{StaticResource BotonBarra}" Command="{Binding AjustarPreciosCommand}">
+                    <StackPanel Orientation="Horizontal"><md:PackIcon Kind="PercentOutline" /><TextBlock Text="Ajustar precios" Margin="6,0,0,0" /></StackPanel>
+                </Button>
             </v:BarraCrud.Extra>
         </v:BarraCrud>
 

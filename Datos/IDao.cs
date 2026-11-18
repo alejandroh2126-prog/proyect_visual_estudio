@@ -163,5 +163,21 @@ namespace Datos
         void FijarEmprendimiento(long chatId, int emprendimientoId);
         void Desvincular(long chatId);
         int ChatsVinculados(int usuarioId);
+
+        /// <summary>Chats con avisos activos (vw_sg_telegram_alertas).</summary>
+        List<ChatAlerta> ChatsConAlertas();
+
+        /// <summary>sp_sg_telegram_alertas: true activa, false desactiva, null alterna. Devuelve si quedaron activas.</summary>
+        bool CambiarAlertas(long chatId, bool? activar);
+    }
+
+    /// <summary>
+    /// Configuracion COMPARTIDA guardada en Oracle (tabla sg_configuracion): la leen la aplicacion de
+    /// cualquier computador y el bot. Hoy guarda la clave y el modelo de Groq.
+    /// </summary>
+    public interface IConfiguracionDao
+    {
+        string? Leer(string clave);
+        void Guardar(string clave, string valor);
     }
 }

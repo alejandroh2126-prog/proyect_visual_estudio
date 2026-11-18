@@ -31,7 +31,7 @@ namespace Presentacion.ViewModels
             {
                 HayEmprendimiento = Sesion.HayEmprendimiento;
                 int usuario = Sesion.IdUsuario;
-                List<ResumenEmprendimiento> todos = await Task.Run(() => App.Servicios.Emprendimientos.Resumenes(usuario));
+                List<ResumenEmprendimiento> todos = await Fondo.Run(() => App.Servicios.Emprendimientos.Resumenes(usuario));
                 Todos.Clear();
                 foreach (ResumenEmprendimiento r in todos) Todos.Add(r);
 
@@ -40,10 +40,10 @@ namespace Presentacion.ViewModels
                 if (!HayEmprendimiento) { Resumen = null; Ventas = null; return; }
 
                 int emp = Sesion.IdEmprendimiento;
-                Resumen = await Task.Run(() => App.Servicios.Reportes.Resumen(emp));
-                Ventas = await Task.Run(() => App.Servicios.Ventas.Resumen(emp));
-                foreach (ProductoStockBajo p in await Task.Run(() => App.Servicios.Inventario.StockBajo(emp))) StockBajo.Add(p);
-                foreach (Presupuesto p in await Task.Run(() => App.Servicios.Presupuestos.Listar(emp, Validar.MesActual())))
+                Resumen = await Fondo.Run(() => App.Servicios.Reportes.Resumen(emp));
+                Ventas = await Fondo.Run(() => App.Servicios.Ventas.Resumen(emp));
+                foreach (ProductoStockBajo p in await Fondo.Run(() => App.Servicios.Inventario.StockBajo(emp))) StockBajo.Add(p);
+                foreach (Presupuesto p in await Fondo.Run(() => App.Servicios.Presupuestos.Listar(emp, Validar.MesActual())))
                     if (p.Estado != Presupuesto.EstadoOk) Alertas.Add(p);
             });
         }
@@ -69,7 +69,7 @@ namespace Presentacion.ViewModels
         protected override Task<List<Emprendimiento>> Consultar()
         {
             int usuario = Sesion.IdUsuario;
-            return Task.Run(() => App.Servicios.Emprendimientos.Listar(usuario));
+            return Fondo.Run(() => App.Servicios.Emprendimientos.Listar(usuario));
         }
 
         protected override bool Coincide(Emprendimiento e, string f)
@@ -103,7 +103,7 @@ namespace Presentacion.ViewModels
                     Estado = nuevo ? Estados.Activo : (form["estado"].Seleccion as string ?? Estados.Activo)
                 };
                 int usuario = Sesion.IdUsuario;
-                await Task.Run(() => App.Servicios.Emprendimientos.Guardar(usuario, datos));
+                await Fondo.Run(() => App.Servicios.Emprendimientos.Guardar(usuario, datos));
             });
 
             f.Agregar(new CampoFormulario("nombre", "Nombre del emprendimiento", TipoCampo.Texto) { MaxLongitud = 150, Texto = e?.Nombre ?? string.Empty });
@@ -133,7 +133,7 @@ namespace Presentacion.ViewModels
         protected override Task EliminarElemento(Emprendimiento e)
         {
             int usuario = Sesion.IdUsuario;
-            return Task.Run(() => App.Servicios.Emprendimientos.Eliminar(usuario, e.Id));
+            return Fondo.Run(() => App.Servicios.Emprendimientos.Eliminar(usuario, e.Id));
         }
     }
 
@@ -151,7 +151,7 @@ namespace Presentacion.ViewModels
         protected override Task<List<Cargo>> Consultar()
         {
             int emp = Sesion.IdEmprendimiento;
-            return Task.Run(() => App.Servicios.Nomina.Cargos(emp));
+            return Fondo.Run(() => App.Servicios.Nomina.Cargos(emp));
         }
 
         protected override bool Coincide(Cargo c, string f) { return Formato.Contiene(c.Nombre, f); }
@@ -159,7 +159,7 @@ namespace Presentacion.ViewModels
         protected override async Task<FormularioViewModel?> CrearFormulario(Cargo? c)
         {
             int sector = Sesion.Emprendimiento?.SectorId ?? 0;
-            List<CargoPlantilla> plantillas = await Task.Run(() => App.Servicios.Catalogos.PlantillasDeCargo(sector));
+            List<CargoPlantilla> plantillas = await Fondo.Run(() => App.Servicios.Catalogos.PlantillasDeCargo(sector));
 
             FormularioViewModel f = new FormularioViewModel(c == null ? "Nuevo cargo" : "Editar cargo", async form =>
             {
@@ -172,7 +172,7 @@ namespace Presentacion.ViewModels
                     Descripcion = form["descripcion"].ValorTexto
                 };
                 int emp = Sesion.IdEmprendimiento;
-                await Task.Run(() => App.Servicios.Nomina.GuardarCargo(emp, datos));
+                await Fondo.Run(() => App.Servicios.Nomina.GuardarCargo(emp, datos));
             });
 
             CampoFormulario nombre = new CampoFormulario("nombre", "Nombre del cargo", TipoCampo.Texto) { MaxLongitud = 100, Texto = c?.Nombre ?? string.Empty };
@@ -209,7 +209,7 @@ namespace Presentacion.ViewModels
         protected override async Task EliminarElemento(Cargo c)
         {
             int emp = Sesion.IdEmprendimiento;
-            await Task.Run(() => App.Servicios.Nomina.EliminarCargo(emp, c.Id));
+            await Fondo.Run(() => App.Servicios.Nomina.EliminarCargo(emp, c.Id));
         }
 
         protected override async Task DespuesDeCargar() { await _alCambiar(); }
@@ -226,7 +226,7 @@ namespace Presentacion.ViewModels
         protected override Task<List<Trabajador>> Consultar()
         {
             int emp = Sesion.IdEmprendimiento;
-            return Task.Run(() => App.Servicios.Nomina.Trabajadores(emp));
+            return Fondo.Run(() => App.Servicios.Nomina.Trabajadores(emp));
         }
 
         protected override bool Coincide(Trabajador t, string f)
@@ -239,7 +239,7 @@ namespace Presentacion.ViewModels
         protected override async Task<FormularioViewModel?> CrearFormulario(Trabajador? t)
         {
             int emp = Sesion.IdEmprendimiento;
-            List<Cargo> cargos = await Task.Run(() => App.Servicios.Nomina.Cargos(emp));
+            List<Cargo> cargos = await Fondo.Run(() => App.Servicios.Nomina.Cargos(emp));
             if (cargos.Count == 0)
                 throw new ReglaDeNegocioException("Primero crea al menos un cargo en la pestaña Cargos.");
             List<TipoDocumento> tipos = App.Servicios.Catalogos.TiposDocumento();
@@ -256,12 +256,12 @@ namespace Presentacion.ViewModels
                     Apellido = form["apellido"].ValorTexto,
                     CargoId = form["cargo"].Elegido<Cargo>()?.Id ?? 0,
                     Telefono = form["telefono"].ValorTexto,
-                    Email = form["email"].ValorTexto,
+                    Email = t?.Email ?? string.Empty,   // ya no se pide correo al trabajador
                     CiudadCodigo = form["ciudad"].Elegido<Ciudad>()?.Codigo ?? string.Empty,
                     FechaIngreso = form["fecha"].Fecha ?? DateTime.Today,
                     Estado = t?.Estado ?? Estados.Activo
                 };
-                await Task.Run(() => App.Servicios.Nomina.GuardarTrabajador(emp, datos));
+                await Fondo.Run(() => App.Servicios.Nomina.GuardarTrabajador(emp, datos));
             });
 
             TipoDocumento? tipoActual = tipos.Find(x => x.Codigo == (t?.TipoDocumento ?? "CC"));
@@ -286,7 +286,6 @@ namespace Presentacion.ViewModels
                 Seleccion = t == null ? (cargos.Count == 1 ? cargos[0] : null) : cargos.Find(x => x.Id == t.CargoId)
             });
             f.Agregar(new CampoFormulario("telefono", "Celular", TipoCampo.Entero) { Requerido = false, MaxLongitud = 10, Texto = t?.Telefono ?? string.Empty, Ayuda = "10 números, sin espacios." });
-            f.Agregar(new CampoFormulario("email", "Correo", TipoCampo.Texto) { Requerido = false, MaxLongitud = 150, Texto = t?.Email ?? string.Empty });
             f.Agregar(new CampoFormulario("ciudad", "Ciudad de residencia", TipoCampo.ListaPredictiva)
             {
                 Requerido = false,
@@ -300,7 +299,7 @@ namespace Presentacion.ViewModels
         protected override async Task EliminarElemento(Trabajador t)
         {
             int emp = Sesion.IdEmprendimiento;
-            await Task.Run(() => App.Servicios.Nomina.EliminarTrabajador(emp, t.Id));
+            await Fondo.Run(() => App.Servicios.Nomina.EliminarTrabajador(emp, t.Id));
         }
 
         protected override async Task DespuesDeCargar() { await _alCambiar(); }
@@ -311,7 +310,7 @@ namespace Presentacion.ViewModels
             if (Seleccionado == null) { Notificador.Error("Selecciona un trabajador."); return; }
             Trabajador t = Seleccionado;
             int emp = Sesion.IdEmprendimiento;
-            await Ejecutar(() => Task.Run(() => App.Servicios.Nomina.CambiarEstado(emp, t.Id)));
+            await Ejecutar(() => Fondo.Run(() => App.Servicios.Nomina.CambiarEstado(emp, t.Id)));
             await Recargar();
         }
     }
@@ -340,8 +339,8 @@ namespace Presentacion.ViewModels
         private async Task CargarResumen()
         {
             int emp = Sesion.IdEmprendimiento;
-            Resumen = await Task.Run(() => App.Servicios.Nomina.Resumen(emp));
-            List<FilaNomina> filas = await Task.Run(() => App.Servicios.Nomina.Detalle(emp));
+            Resumen = await Fondo.Run(() => App.Servicios.Nomina.Resumen(emp));
+            List<FilaNomina> filas = await Fondo.Run(() => App.Servicios.Nomina.Detalle(emp));
             Detalle.Clear();
             foreach (FilaNomina f in filas) Detalle.Add(f);
         }

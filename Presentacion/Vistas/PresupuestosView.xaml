@@ -7,7 +7,7 @@
         <DockPanel DockPanel.Dock="Top">
             <ComboBox DockPanel.Dock="Right" Width="160" ItemsSource="{Binding Meses}" SelectedItem="{Binding Mes}" VerticalAlignment="Top"
                       Style="{StaticResource MaterialDesignOutlinedComboBox}" md:HintAssist.Hint="Mes" />
-            <TextBlock Text="Presupuestos del mes" Style="{StaticResource TituloSeccion}" />
+            <TextBlock Text="Límite de gasto por categoría" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
         </DockPanel>
         <TextBlock DockPanel.Dock="Top" Opacity="0.75" Margin="0,0,0,12" TextWrapping="Wrap"
                    Text="El gastado, el porcentaje y el estado los calcula Oracle (procedimiento sp_sg_presupuestos_estado). Alerta desde el 80 %." />

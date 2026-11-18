@@ -426,5 +426,48 @@ namespace Datos.Oracle
         {
             return (int)Valor("SELECT pkg_sg_telegram.chats_vinculados(:p_usuario) FROM dual", c => Entero(c, "usuario", usuarioId));
         }
+
+        public List<ChatAlerta> ChatsConAlertas()
+        {
+            return Lista("SELECT chat_id, usuario_id, emprendimiento_id, emprendimiento FROM vw_sg_telegram_alertas", r => new ChatAlerta
+            {
+                ChatId = LongNulo(r, "chat_id") ?? 0,
+                UsuarioId = Int(r, "usuario_id"),
+                EmprendimientoId = Int(r, "emprendimiento_id"),
+                Emprendimiento = Txt(r, "emprendimiento")
+            });
+        }
+
+        public bool CambiarAlertas(long chatId, bool? activar)
+        {
+            return Ejecutar(con =>
+            {
+                using (OracleCommand cmd = Comando(con, "BEGIN sp_sg_telegram_alertas(:p_chat, :p_activar, :p_estado); END;"))
+                {
+                    Largo(cmd, "chat", chatId);
+                    Texto(cmd, "activar", activar == null ? null : (activar.Value ? "S" : "N"));
+                    OracleParameter estado = Param(cmd, "estado", OracleDbType.Varchar2, null, ParameterDirection.Output);
+                    cmd.ExecuteNonQuery();
+                    return SalidaTexto(estado).Trim() == "S";
+                }
+            });
+        }
+    }
+
+    /// <summary>sg_configuracion: se lee con SELECT y se escribe con sp_sg_config_guardar.</summary>
+    public class ConfiguracionDaoOracle : IConfiguracionDao
+    {
+        public string? Leer(string clave)
+        {
+            List<string> valores = Lista("SELECT valor FROM sg_configuracion WHERE clave = :p_clave",
+                                         r => Txt(r, "valor"), c => Texto(c, "clave", clave.ToUpperInvariant()));
+            return valores.Count == 0 ? null : valores[0];
+        }
+
+        public void Guardar(string clave, string valor)
+        {
+            EjecutarSql("BEGIN sp_sg_config_guardar(:p_clave, :p_valor); END;",
+                        c => { Texto(c, "clave", clave); Texto(c, "valor", valor); });
+        }
     }
 }

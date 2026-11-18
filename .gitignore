@@ -440,3 +440,4 @@ wallet/
 Publicado/
 PublicadoBot/
 Instalador/Salida/
+**/Properties/launchSettings.json

@@ -37,12 +37,13 @@ namespace Datos
             string? usuarioEnv = Environment.GetEnvironmentVariable("SGAPE_DB_USUARIO");
             if (!string.IsNullOrWhiteSpace(usuarioEnv))
             {
+                // Trim: un espacio pegado por error (" SGAPE_BOT") hacia que Oracle respondiera ORA-01017
                 return new ConfiguracionBD
                 {
-                    Usuario = usuarioEnv,
-                    Clave = Environment.GetEnvironmentVariable("SGAPE_DB_CLAVE") ?? string.Empty,
-                    DataSource = Environment.GetEnvironmentVariable("SGAPE_DB_DATASOURCE") ?? string.Empty,
-                    CarpetaWallet = Environment.GetEnvironmentVariable("SGAPE_DB_WALLET") ?? string.Empty
+                    Usuario = usuarioEnv.Trim(),
+                    Clave = (Environment.GetEnvironmentVariable("SGAPE_DB_CLAVE") ?? string.Empty).Trim(),
+                    DataSource = (Environment.GetEnvironmentVariable("SGAPE_DB_DATASOURCE") ?? string.Empty).Trim(),
+                    CarpetaWallet = (Environment.GetEnvironmentVariable("SGAPE_DB_WALLET") ?? string.Empty).Trim().Trim('"')
                 };
             }
 
@@ -59,10 +60,10 @@ namespace Datos
                     JsonElement raiz = doc.RootElement;
                     return new ConfiguracionBD
                     {
-                        Usuario = Leer(raiz, "usuario"),
-                        Clave = Leer(raiz, "clave"),
-                        DataSource = Leer(raiz, "dataSource"),
-                        CarpetaWallet = Leer(raiz, "carpetaWallet")
+                        Usuario = Leer(raiz, "usuario").Trim(),
+                        Clave = Leer(raiz, "clave").Trim(),
+                        DataSource = Leer(raiz, "dataSource").Trim(),
+                        CarpetaWallet = Leer(raiz, "carpetaWallet").Trim().Trim('"')
                     };
                 }
             }

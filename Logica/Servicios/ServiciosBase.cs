@@ -237,6 +237,40 @@ namespace Logica.Servicios
         }
     }
 
+    /// <summary>
+    /// UNA SOLA MISION: configuracion compartida en Oracle (sg_configuracion).
+    /// Asi la clave de Groq se escribe UNA vez y sirve en todos los computadores y en el bot.
+    /// </summary>
+    public class ServicioConfiguracion
+    {
+        public const string ClaveGroq = "GROQ_API_KEY";
+        public const string ModeloGroq = "GROQ_MODELO";
+
+        private readonly IConfiguracionDao _dao;
+        public ServicioConfiguracion(IConfiguracionDao dao) { _dao = dao; }
+
+        /// <summary>Devuelve null si no existe o si la tabla aun no se creo (script sin ejecutar).</summary>
+        public string? Leer(string clave)
+        {
+            try
+            {
+                string? v = _dao.Leer(clave);
+                return string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+            }
+            catch (ReglaDeNegocioException) { return null; }
+        }
+
+        public void Guardar(string clave, string valor)
+        {
+            if (string.IsNullOrWhiteSpace(valor)) throw new ReglaDeNegocioException("El valor no puede quedar vacío.");
+            try { _dao.Guardar(clave, valor.Trim().Trim('"')); }
+            catch (ReglaDeNegocioException ex) when (ex.Message.Contains("ORA-06550") || ex.Message.Contains("PLS-00201") || ex.Message.Contains("ORA-00942"))
+            {
+                throw new ReglaDeNegocioException("Falta ejecutar sql/sgape_v2_configuracion.sql en Oracle (crea la tabla de configuración).");
+            }
+        }
+    }
+
     /// <summary>UNA SOLA MISION: vincular Telegram con la cuenta (paquete pkg_sg_telegram).</summary>
     public class ServicioTelegram
     {
@@ -262,5 +296,7 @@ namespace Logica.Servicios
         public int? EmprendimientoDeChat(long chatId) { return _telegram.EmprendimientoDeChat(chatId); }
         public void FijarEmprendimiento(long chatId, int emprendimientoId) { _telegram.FijarEmprendimiento(chatId, emprendimientoId); }
         public void Desvincular(long chatId) { _telegram.Desvincular(chatId); }
+        public List<ChatAlerta> ChatsConAlertas() { return _telegram.ChatsConAlertas(); }
+        public bool CambiarAlertas(long chatId, bool? activar) { return _telegram.CambiarAlertas(chatId, activar); }
     }
 }

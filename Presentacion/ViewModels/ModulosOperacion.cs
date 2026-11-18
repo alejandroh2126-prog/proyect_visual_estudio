@@ -35,7 +35,7 @@ namespace Presentacion.ViewModels
         protected override Task<List<Vacante>> Consultar()
         {
             int emp = Sesion.IdEmprendimiento;
-            return Task.Run(() => App.Servicios.Vacantes.Listar(emp));
+            return Fondo.Run(() => App.Servicios.Vacantes.Listar(emp));
         }
 
         protected override bool Coincide(Vacante v, string f) { return Formato.Contiene(v.Titulo, f) || Formato.Contiene(v.Cargo, f); }
@@ -45,7 +45,7 @@ namespace Presentacion.ViewModels
         protected override async Task<FormularioViewModel?> CrearFormulario(Vacante? v)
         {
             int emp = Sesion.IdEmprendimiento;
-            List<Cargo> cargos = await Task.Run(() => App.Servicios.Nomina.Cargos(emp));
+            List<Cargo> cargos = await Fondo.Run(() => App.Servicios.Nomina.Cargos(emp));
             if (cargos.Count == 0) throw new ReglaDeNegocioException("Primero crea el cargo en Nómina > Cargos.");
             List<Ciudad> ciudades = App.Servicios.Catalogos.Ciudades();
 
@@ -60,7 +60,7 @@ namespace Presentacion.ViewModels
                     CiudadCodigo = form["ciudad"].Elegido<Ciudad>()?.Codigo ?? string.Empty,
                     FechaCierre = form["cierre"].Fecha
                 };
-                await Task.Run(() => App.Servicios.Vacantes.Guardar(emp, datos));
+                await Fondo.Run(() => App.Servicios.Vacantes.Guardar(emp, datos));
             });
 
             CampoFormulario titulo = new CampoFormulario("titulo", "Título de la vacante", TipoCampo.Texto) { MaxLongitud = 120, Texto = v?.Titulo ?? string.Empty };
@@ -90,7 +90,7 @@ namespace Presentacion.ViewModels
         protected override Task EliminarElemento(Vacante v)
         {
             int emp = Sesion.IdEmprendimiento;
-            return Task.Run(() => App.Servicios.Vacantes.Eliminar(emp, v.Id));
+            return Fondo.Run(() => App.Servicios.Vacantes.Eliminar(emp, v.Id));
         }
 
         private async Task CargarPostulaciones()
@@ -101,7 +101,7 @@ namespace Presentacion.ViewModels
             int vacante = Seleccionado.Id;
             await Ejecutar(async () =>
             {
-                foreach (Postulacion p in await Task.Run(() => App.Servicios.Vacantes.Postulaciones(emp, vacante))) Postulaciones.Add(p);
+                foreach (Postulacion p in await Fondo.Run(() => App.Servicios.Vacantes.Postulaciones(emp, vacante))) Postulaciones.Add(p);
             });
         }
 
@@ -111,7 +111,7 @@ namespace Presentacion.ViewModels
             if (Seleccionado == null) { Notificador.Error("Selecciona una vacante."); return; }
             int emp = Sesion.IdEmprendimiento;
             int id = Seleccionado.Id;
-            await Ejecutar(() => Task.Run(() => App.Servicios.Vacantes.AbrirOCerrar(emp, id)));
+            await Ejecutar(() => Fondo.Run(() => App.Servicios.Vacantes.AbrirOCerrar(emp, id)));
             await Recargar();
         }
 
@@ -123,7 +123,7 @@ namespace Presentacion.ViewModels
             int emp = Sesion.IdEmprendimiento;
             await Ejecutar(async () =>
             {
-                ArchivoCv cv = await Task.Run(() => App.Servicios.Vacantes.HojaDeVida(emp, p.Id));
+                ArchivoCv cv = await Fondo.Run(() => App.Servicios.Vacantes.HojaDeVida(emp, p.Id));
                 string filtro = cv.Tipo == ServicioVacantes.TipoPdf ? "PDF (*.pdf)|*.pdf" : "Word (*.docx)|*.docx";
                 string? ruta = Archivos.GuardarComo(cv.Nombre, cv.Contenido, filtro);
                 if (ruta != null) Archivos.Abrir(ruta);
@@ -138,7 +138,7 @@ namespace Presentacion.ViewModels
             Postulacion p = PostulacionSeleccionada;
             if (!await Notificador.Confirmar("Rechazar postulación", "¿Rechazar la postulación de " + p.NombreCompleto + "?", "Rechazar")) return;
             int emp = Sesion.IdEmprendimiento;
-            await Ejecutar(() => Task.Run(() => App.Servicios.Vacantes.Rechazar(emp, p.Id)));
+            await Ejecutar(() => Fondo.Run(() => App.Servicios.Vacantes.Rechazar(emp, p.Id)));
             await CargarPostulaciones();
         }
 
@@ -151,7 +151,7 @@ namespace Presentacion.ViewModels
             FormularioViewModel f = new FormularioViewModel("Contratar a " + p.NombreCompleto, async form =>
             {
                 DateTime fecha = form["fecha"].Fecha ?? DateTime.Today;
-                await Task.Run(() => App.Servicios.Vacantes.Contratar(emp, p.Id, fecha));
+                await Fondo.Run(() => App.Servicios.Vacantes.Contratar(emp, p.Id, fecha));
             }) { TextoBoton = "Contratar" };
             f.Agregar(new CampoFormulario("fecha", "Fecha de ingreso", TipoCampo.Fecha)
             {
@@ -176,10 +176,14 @@ namespace Presentacion.ViewModels
 
         protected override string Nombre { get { return "producto"; } }
 
+        private const string SinMovimiento = "Sin cambio";
+        private const string MovEntrada = "Entrada (compra o llegada de mercancía)";
+        private const string MovSalida = "Salida (daño, vencimiento o uso)";
+
         protected override Task<List<Producto>> Consultar()
         {
             int emp = Sesion.IdEmprendimiento;
-            return Task.Run(() => App.Servicios.Inventario.Listar(emp));
+            return Fondo.Run(() => App.Servicios.Inventario.Listar(emp));
         }
 
         protected override Task DespuesDeCargar()
@@ -197,7 +201,7 @@ namespace Presentacion.ViewModels
         protected override async Task<FormularioViewModel?> CrearFormulario(Producto? p)
         {
             int emp = Sesion.IdEmprendimiento;
-            List<string> categorias = await Task.Run(() => App.Servicios.Catalogos.CategoriasDeProducto(emp));
+            List<string> categorias = await Fondo.Run(() => App.Servicios.Catalogos.CategoriasDeProducto(emp));
 
             FormularioViewModel f = new FormularioViewModel(p == null ? "Nuevo producto" : "Editar producto", async form =>
             {
@@ -211,7 +215,26 @@ namespace Presentacion.ViewModels
                     StockMinimo = form["minimo"].ValorEntero,
                     Stock = p == null ? form["stock"].ValorEntero : p.Stock
                 };
-                await Task.Run(() => App.Servicios.Inventario.Guardar(emp, datos));
+
+                // Al editar: movimiento de stock opcional (antes eran los botones Entrada y Salida)
+                string? movimiento = p == null ? null : form["movimiento"].Seleccion as string;
+                int cantidad = p == null ? 0 : form["cantidad"].ValorEntero;
+                bool mueve = movimiento != null && movimiento != SinMovimiento;
+                if (mueve && cantidad <= 0)
+                    throw new ReglaDeNegocioException("Escribe cuántas unidades entran o salen.");
+                if (!mueve && cantidad > 0)
+                    throw new ReglaDeNegocioException("Elige si las " + cantidad + " unidades son una entrada o una salida.");
+                if (mueve && movimiento == MovSalida && cantidad > p!.Stock)
+                    throw new ReglaDeNegocioException("No puedes sacar " + cantidad + " unidades: solo hay " + p.Stock + ".");
+
+                await Fondo.Run(() => App.Servicios.Inventario.Guardar(emp, datos));
+                if (mueve)
+                {
+                    int id = p!.Id;
+                    // sp_sg_mover_stock: la entrada registra la compra como gasto en Finanzas
+                    if (movimiento == MovEntrada) await Fondo.Run(() => App.Servicios.Inventario.Entrada(emp, id, cantidad));
+                    else await Fondo.Run(() => App.Servicios.Inventario.Salida(emp, id, cantidad));
+                }
                 string? advertencia = ServicioInventario.Advertencia(datos);
                 if (advertencia != null) Notificador.Error(advertencia);
             });
@@ -225,45 +248,26 @@ namespace Presentacion.ViewModels
             f.Agregar(new CampoFormulario("compra", "Precio de compra", TipoCampo.Moneda) { MaxLongitud = 15, Texto = p == null ? string.Empty : Math.Round(p.PrecioCompra, 0).ToString() });
             f.Agregar(new CampoFormulario("venta", "Precio de venta", TipoCampo.Moneda) { MaxLongitud = 15, Texto = p == null ? string.Empty : Math.Round(p.PrecioVenta, 0).ToString() });
             if (p == null)
-                f.Agregar(new CampoFormulario("stock", "Stock inicial", TipoCampo.Entero) { MaxLongitud = 7, Texto = "0", Ayuda = "Después cambia con Entrada, Salida o las ventas." });
+                f.Agregar(new CampoFormulario("stock", "Stock inicial", TipoCampo.Entero) { MaxLongitud = 7, Texto = "0", Ayuda = "Después cambia con Editar (entrada o salida) o con las ventas." });
             f.Agregar(new CampoFormulario("minimo", "Stock mínimo (alerta)", TipoCampo.Entero) { MaxLongitud = 7, Texto = (p?.StockMinimo ?? 0).ToString() });
+            if (p != null)
+            {
+                f.Agregar(new CampoFormulario("movimiento", "Movimiento de stock", TipoCampo.Lista)
+                {
+                    Requerido = false,
+                    Opciones = new[] { SinMovimiento, MovEntrada, MovSalida },
+                    Seleccion = SinMovimiento,
+                    Ayuda = "Stock actual: " + p.Stock + ". La entrada se registra como compra en Finanzas (" + Formato.Moneda(p.PrecioCompra) + " c/u)."
+                });
+                f.Agregar(new CampoFormulario("cantidad", "Cantidad", TipoCampo.Entero) { Requerido = false, MaxLongitud = 7, Texto = string.Empty });
+            }
             return f;
         }
 
         protected override Task EliminarElemento(Producto p)
         {
             int emp = Sesion.IdEmprendimiento;
-            return Task.Run(() => App.Servicios.Inventario.Eliminar(emp, p.Id));
-        }
-
-        [RelayCommand]
-        private Task Entrada() { return MoverStock(true); }
-
-        [RelayCommand]
-        private Task Salida() { return MoverStock(false); }
-
-        private async Task MoverStock(bool entrada)
-        {
-            if (Seleccionado == null) { Notificador.Error("Selecciona un producto."); return; }
-            Producto p = Seleccionado;
-            int emp = Sesion.IdEmprendimiento;
-            FormularioViewModel f = new FormularioViewModel((entrada ? "Entrada de stock: " : "Salida de stock: ") + p.Nombre, async form =>
-            {
-                int cantidad = form["cantidad"].ValorEntero;
-                if (entrada) await Task.Run(() => App.Servicios.Inventario.Entrada(emp, p.Id, cantidad));
-                else await Task.Run(() => App.Servicios.Inventario.Salida(emp, p.Id, cantidad));
-            }) { TextoBoton = entrada ? "Registrar entrada" : "Registrar salida" };
-            f.Agregar(new CampoFormulario("cantidad", "Cantidad", TipoCampo.Entero)
-            {
-                MaxLongitud = 7,
-                Ayuda = entrada ? "La compra se registra sola en Finanzas (" + Formato.Moneda(p.PrecioCompra) + " c/u)."
-                                : "Stock actual: " + p.Stock + "."
-            });
-            if (await Notificador.Formulario(f))
-            {
-                Notificador.Exito("Stock actualizado.");
-                await Recargar();
-            }
+            return Fondo.Run(() => App.Servicios.Inventario.Eliminar(emp, p.Id));
         }
 
         [RelayCommand]
@@ -274,7 +278,7 @@ namespace Presentacion.ViewModels
             FormularioViewModel f = new FormularioViewModel("Ajustar precios de venta", async form =>
             {
                 decimal porcentaje = form["porcentaje"].ValorDecimal;
-                afectados = await Task.Run(() => App.Servicios.Inventario.AjustarPrecios(emp, porcentaje));
+                afectados = await Fondo.Run(() => App.Servicios.Inventario.AjustarPrecios(emp, porcentaje));
             }) { TextoBoton = "Aplicar" };
             f.Agregar(new CampoFormulario("porcentaje", "Porcentaje", TipoCampo.Decimal)
             {
@@ -321,13 +325,13 @@ namespace Presentacion.ViewModels
             await Ejecutar(async () =>
             {
                 int emp = Sesion.IdEmprendimiento;
-                List<Producto> productos = await Task.Run(() => App.Servicios.Inventario.Listar(emp));
+                List<Producto> productos = await Fondo.Run(() => App.Servicios.Inventario.Listar(emp));
                 Productos.Clear();
                 foreach (Producto p in productos) if (p.Stock > 0) Productos.Add(p);
-                List<Venta> ventas = await Task.Run(() => App.Servicios.Ventas.Listar(emp));
+                List<Venta> ventas = await Fondo.Run(() => App.Servicios.Ventas.Listar(emp));
                 Historial.Clear();
                 foreach (Venta v in ventas) Historial.Add(v);
-                Resumen = await Task.Run(() => App.Servicios.Ventas.Resumen(emp));
+                Resumen = await Fondo.Run(() => App.Servicios.Ventas.Resumen(emp));
             });
         }
 
@@ -390,7 +394,7 @@ namespace Presentacion.ViewModels
             int emp = Sesion.IdEmprendimiento;
             string obs = Observacion;
             Venta? venta = null;
-            await Ejecutar(async () => { venta = await Task.Run(() => App.Servicios.Ventas.Registrar(emp, obs, detalles)); });
+            await Ejecutar(async () => { venta = await Fondo.Run(() => App.Servicios.Ventas.Registrar(emp, obs, detalles)); });
             if (venta == null) return;
 
             Notificador.Exito("Venta #" + venta.Id + " registrada por " + Formato.Moneda(venta.Total) + ".");
@@ -410,7 +414,7 @@ namespace Presentacion.ViewModels
             Detalle = null;
             if (v == null) return;
             int emp = Sesion.IdEmprendimiento;
-            await Ejecutar(async () => { Detalle = await Task.Run(() => App.Servicios.Ventas.Obtener(emp, v.Id)); });
+            await Ejecutar(async () => { Detalle = await Fondo.Run(() => App.Servicios.Ventas.Obtener(emp, v.Id)); });
         }
 
         [RelayCommand]
@@ -425,7 +429,7 @@ namespace Presentacion.ViewModels
             Emprendimiento e = Sesion.Emprendimiento!;
             await Ejecutar(async () =>
             {
-                byte[] pdf = await Task.Run(() => App.Servicios.Reportes.FacturaPdf(e, venta));
+                byte[] pdf = await Fondo.Run(() => App.Servicios.Reportes.FacturaPdf(e, venta));
                 string? ruta = Archivos.GuardarComo(ServicioReportes.NombreArchivoFactura(venta), pdf, "PDF (*.pdf)|*.pdf");
                 if (ruta != null) Archivos.Abrir(ruta);
             });
@@ -446,17 +450,24 @@ namespace Presentacion.ViewModels
         [ObservableProperty] private Movimiento? _seleccionado;
         [ObservableProperty] private string _filtro = "Todos";
 
+        /// <summary>
+        /// Presupuestos vive DENTRO de Finanzas (pestaña): los movimientos son lo que ya pasó y el presupuesto
+        /// es el límite que te pones por categoría de gasto. Cada gasto que registras aquí mueve su presupuesto.
+        /// </summary>
+        public PresupuestosViewModel Presupuestos { get; } = new PresupuestosViewModel();
+
         public override async Task Cargar()
         {
             await Ejecutar(async () =>
             {
                 int emp = Sesion.IdEmprendimiento;
-                Resumen = await Task.Run(() => App.Servicios.Finanzas.Resumen(emp));
-                List<Movimiento> lista = await Task.Run(() => App.Servicios.Finanzas.Listar(emp));
+                Resumen = await Fondo.Run(() => App.Servicios.Finanzas.Resumen(emp));
+                List<Movimiento> lista = await Fondo.Run(() => App.Servicios.Finanzas.Listar(emp));
                 _todos.Clear();
                 _todos.AddRange(lista);
                 Filtrar();
             });
+            await Presupuestos.Cargar();
         }
 
         partial void OnFiltroChanged(string value) { Filtrar(); }
@@ -487,7 +498,7 @@ namespace Presentacion.ViewModels
                 string descripcion = form["descripcion"].ValorTexto;
                 decimal monto = form["monto"].ValorMoneda;
                 DateTime fecha = form["fecha"].Fecha ?? DateTime.Today;
-                await Task.Run(() => App.Servicios.Finanzas.Registrar(emp, ingreso, categoria, descripcion, monto, fecha));
+                await Fondo.Run(() => App.Servicios.Finanzas.Registrar(emp, ingreso, categoria, descripcion, monto, fecha));
             });
             f.Agregar(new CampoFormulario("categoria", "Categoría", TipoCampo.Lista) { Opciones = categorias });
             f.Agregar(new CampoFormulario("monto", "Monto", TipoCampo.Moneda) { MaxLongitud = 15 });
@@ -509,7 +520,7 @@ namespace Presentacion.ViewModels
             if (!m.EsManual) { Notificador.Error("Este movimiento lo creó una venta o el inventario; no se elimina a mano."); return; }
             if (!await Notificador.Confirmar("Eliminar movimiento", "¿Eliminar " + m.Categoria + " por " + Formato.Moneda(m.Monto) + "?", "Eliminar")) return;
             int emp = Sesion.IdEmprendimiento;
-            await Ejecutar(() => Task.Run(() => App.Servicios.Finanzas.Eliminar(emp, m.Id)));
+            await Ejecutar(() => Fondo.Run(() => App.Servicios.Finanzas.Eliminar(emp, m.Id)));
             await Cargar();
         }
     }
@@ -538,7 +549,7 @@ namespace Presentacion.ViewModels
         {
             int emp = Sesion.IdEmprendimiento;
             string mes = Mes;
-            return Task.Run(() => App.Servicios.Presupuestos.Listar(emp, mes));
+            return Fondo.Run(() => App.Servicios.Presupuestos.Listar(emp, mes));
         }
 
         protected override bool Coincide(Presupuesto p, string f) { return Formato.Contiene(p.Categoria, f); }
@@ -558,7 +569,7 @@ namespace Presentacion.ViewModels
                 {
                     int categoria = p?.CategoriaId ?? (form["categoria"].Elegido<CategoriaMovimiento>()?.Id ?? 0);
                     decimal limite = form["limite"].ValorMoneda;
-                    await Task.Run(() => App.Servicios.Presupuestos.Guardar(emp, p?.Id ?? 0, categoria, limite, mes));
+                    await Fondo.Run(() => App.Servicios.Presupuestos.Guardar(emp, p?.Id ?? 0, categoria, limite, mes));
                 });
 
             if (p == null)
@@ -585,7 +596,7 @@ namespace Presentacion.ViewModels
         protected override Task EliminarElemento(Presupuesto p)
         {
             int emp = Sesion.IdEmprendimiento;
-            return Task.Run(() => App.Servicios.Presupuestos.Eliminar(emp, p.Id));
+            return Fondo.Run(() => App.Servicios.Presupuestos.Eliminar(emp, p.Id));
         }
     }
 
@@ -601,7 +612,7 @@ namespace Presentacion.ViewModels
             await Ejecutar(async () =>
             {
                 Emprendimiento e = Sesion.Emprendimiento!;
-                Datos = await Task.Run(() => App.Servicios.Reportes.Reunir(e));
+                Datos = await Fondo.Run(() => App.Servicios.Reportes.Reunir(e));
             });
         }
 
@@ -611,7 +622,7 @@ namespace Presentacion.ViewModels
             Emprendimiento e = Sesion.Emprendimiento!;
             await Ejecutar(async () =>
             {
-                byte[] pdf = await Task.Run(() => App.Servicios.Reportes.ReportePdf(e));
+                byte[] pdf = await Fondo.Run(() => App.Servicios.Reportes.ReportePdf(e));
                 string? ruta = Archivos.GuardarComo(ServicioReportes.NombreArchivoReporte(e), pdf, "PDF (*.pdf)|*.pdf");
                 if (ruta != null) Archivos.Abrir(ruta);
             });
@@ -632,7 +643,7 @@ namespace Presentacion.ViewModels
             await Ejecutar(async () =>
             {
                 int usuario = Sesion.IdUsuario;
-                ChatsVinculados = await Task.Run(() => App.Servicios.Telegram.ChatsVinculados(usuario));
+                ChatsVinculados = await Fondo.Run(() => App.Servicios.Telegram.ChatsVinculados(usuario));
             });
         }
 
@@ -642,7 +653,7 @@ namespace Presentacion.ViewModels
             await Ejecutar(async () =>
             {
                 int usuario = Sesion.IdUsuario;
-                Codigo = await Task.Run(() => App.Servicios.Telegram.GenerarCodigo(usuario));
+                Codigo = await Fondo.Run(() => App.Servicios.Telegram.GenerarCodigo(usuario));
                 Vence = "Vence a las " + DateTime.Now.AddMinutes(10).ToString("HH:mm") + ". Escríbele al bot: /vincular " + Codigo;
             });
         }

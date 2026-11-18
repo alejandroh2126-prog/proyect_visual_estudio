@@ -1,0 +1,95 @@
+<UserControl x:Class="Presentacion.Vistas.AsistenteView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+    <Grid MaxWidth="900" HorizontalAlignment="Left">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <DockPanel Grid.Row="0">
+            <Button DockPanel.Dock="Right" Style="{StaticResource BotonBarra}" Command="{Binding NuevaConversacionCommand}" VerticalAlignment="Center">
+                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Broom" /><TextBlock Text="Nueva conversación" Margin="6,0,0,0" /></StackPanel>
+            </Button>
+            <TextBlock Text="Asistente" Style="{StaticResource TituloSeccion}" />
+        </DockPanel>
+
+        <!-- Primera vez: pedir la clave de Groq (se guarda solo en este computador, nunca en Git) -->
+        <md:Card Grid.Row="1" Style="{StaticResource Tarjeta}" Visibility="{Binding SinClave, Converter={StaticResource BoolAVisible}}">
+            <StackPanel>
+                <TextBlock Text="Activa el asistente (solo una vez)" FontWeight="SemiBold" />
+                <TextBlock TextWrapping="Wrap" Opacity="0.8" Margin="0,4,0,8"
+                           Text="Pega la clave de Groq (empieza por gsk_). Se comprueba con Groq y se guarda en la base de datos: después funciona en cualquier computador que abra SGAPE y en el bot de Telegram, sin volver a pedirla. Nunca se sube a Git." />
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Style="{StaticResource BotonPrincipal}" Command="{Binding GuardarClaveCommand}" Margin="12,0,0,0" Content="Guardar para todos" />
+                    <PasswordBox x:Name="CajaClave" md:HintAssist.Hint="Clave de Groq" Style="{StaticResource MaterialDesignOutlinedPasswordBox}" />
+                </DockPanel>
+            </StackPanel>
+        </md:Card>
+
+        <md:Card Grid.Row="2" Style="{StaticResource Tarjeta}" Margin="0,0,0,8">
+            <ScrollViewer x:Name="Desplazador" VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding Mensajes}" Margin="4">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border x:Name="Globo" Margin="0,4" Padding="12,8" CornerRadius="10" MaxWidth="640"
+                                    HorizontalAlignment="Left" Background="{DynamicResource MaterialDesignChipBackground}">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding Texto}" TextWrapping="Wrap" x:Name="Texto" />
+                                    <TextBlock Text="{Binding Hora}" FontSize="10" Opacity="0.55" HorizontalAlignment="Right" Margin="0,4,0,0" />
+                                </StackPanel>
+                            </Border>
+                            <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding EsUsuario}" Value="True">
+                                    <Setter TargetName="Globo" Property="HorizontalAlignment" Value="Right" />
+                                    <Setter TargetName="Globo" Property="Background" Value="{DynamicResource PrimaryHueMidBrush}" />
+                                    <Setter TargetName="Texto" Property="Foreground" Value="{DynamicResource PrimaryHueMidForegroundBrush}" />
+                                </DataTrigger>
+                            </DataTemplate.Triggers>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </md:Card>
+
+        <StackPanel Grid.Row="3">
+            <ProgressBar IsIndeterminate="True" Height="3" Margin="0,0,0,6" Visibility="{Binding Pensando, Converter={StaticResource BoolAVisible}}" />
+
+                <!-- Confirmacion de un ingreso/gasto propuesto por el asistente -->
+                <md:Card Style="{StaticResource Tarjeta}" Margin="0,0,0,8" Visibility="{Binding HayPendiente, Converter={StaticResource BoolAVisible}}">
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Style="{StaticResource BotonBarra}" Command="{Binding CancelarCommand}" Content="Cancelar" Margin="0,0,8,0" />
+                            <Button Style="{StaticResource BotonPrincipal}" Command="{Binding ConfirmarCommand}" Content="Confirmar" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding TextoPendiente}" TextWrapping="Wrap" VerticalAlignment="Center" FontWeight="SemiBold" />
+                    </DockPanel>
+                </md:Card>
+
+        </StackPanel>
+
+        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="Dame un resumen del negocio" Content="Resumen" Margin="0,0,8,0" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Qué productos tienen stock bajo?" Content="Stock bajo" Margin="0,0,8,0" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cuánto vendí esta semana?" Content="Ventas de la semana" Margin="0,0,8,0" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cómo van los presupuestos de este mes?" Content="Presupuestos" />
+        </StackPanel>
+
+        <DockPanel Grid.Row="5">
+            <Button DockPanel.Dock="Right" Style="{StaticResource BotonPrincipal}" Command="{Binding EnviarCommand}" Margin="12,0,0,0">
+                <StackPanel Orientation="Horizontal"><md:PackIcon Kind="Send" /><TextBlock Text="Enviar" Margin="6,0,0,0" /></StackPanel>
+            </Button>
+            <TextBox Text="{Binding Pregunta, UpdateSourceTrigger=PropertyChanged}" Style="{StaticResource MaterialDesignOutlinedTextBox}"
+                     md:HintAssist.Hint="Escribe tu pregunta y presiona Enter" MaxLength="1000">
+                <TextBox.InputBindings>
+                    <KeyBinding Key="Return" Command="{Binding EnviarCommand}" />
+                </TextBox.InputBindings>
+            </TextBox>
+        </DockPanel>
+    </Grid>
+</UserControl>

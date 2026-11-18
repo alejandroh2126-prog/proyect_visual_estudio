@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
@@ -38,6 +39,39 @@ namespace Presentacion.Comun
         {
             Usuario = null;
             Emprendimiento = null;
+        }
+    }
+
+    /// <summary>
+    /// Ejecuta trabajo de base de datos fuera de la ventana (para que no se congele).
+    /// Las excepciones se ATRAPAN dentro del hilo de fondo y se vuelven a lanzar al esperar: asi Visual Studio
+    /// no se detiene en el codigo con "excepcion no controlada por el usuario" cuando una regla de negocio
+    /// (por ejemplo, una cedula mal escrita) falla. El usuario solo ve el mensaje.
+    /// </summary>
+    public static class Fondo
+    {
+        public static async Task Run(Action accion)
+        {
+            ExceptionDispatchInfo? error = null;
+            await Task.Run(() =>
+            {
+                try { accion(); }
+                catch (Exception ex) { error = ExceptionDispatchInfo.Capture(ex); }
+            });
+            error?.Throw();
+        }
+
+        public static async Task<T> Run<T>(Func<T> funcion)
+        {
+            ExceptionDispatchInfo? error = null;
+            T resultado = default!;
+            await Task.Run(() =>
+            {
+                try { resultado = funcion(); }
+                catch (Exception ex) { error = ExceptionDispatchInfo.Capture(ex); }
+            });
+            error?.Throw();
+            return resultado;
         }
     }
 

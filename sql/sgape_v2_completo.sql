@@ -301,7 +301,9 @@ CREATE TABLE sg_telegram_vinculo (
     usuario_id         NUMBER(10)  NOT NULL,
     emprendimiento_id  NUMBER(10),             -- emprendimiento activo en el chat
     fecha_vinculo      DATE DEFAULT SYSDATE NOT NULL,
+    alertas            CHAR(1) DEFAULT 'S' NOT NULL,   -- avisos automaticos del bot (S/N)
     CONSTRAINT pk_sg_telegram_vinculo PRIMARY KEY (chat_id),
+    CONSTRAINT ck_sg_tvin_alertas CHECK (alertas IN ('S', 'N')),
     CONSTRAINT fk_sg_tvin_usuario FOREIGN KEY (usuario_id)        REFERENCES sg_usuario (id) ON DELETE CASCADE,
     CONSTRAINT fk_sg_tvin_emp     FOREIGN KEY (emprendimiento_id) REFERENCES sg_emprendimiento (id) ON DELETE SET NULL
 );
@@ -378,6 +380,15 @@ CREATE INDEX ix_sg_tvin_emp       ON sg_telegram_vinculo (emprendimiento_id);
 CREATE INDEX ix_sg_tcod_usuario   ON sg_telegram_codigo (usuario_id);
 -- Las UNIQUE (emprendimiento_id, ...) ya crean un indice que empieza por emprendimiento_id,
 -- por eso cargo, trabajador, producto y presupuesto no necesitan otro indice para esa llave.
+
+-- Configuracion compartida por la aplicacion y el bot (clave y modelo de Groq).
+-- Se llena desde la aplicacion (seccion Asistente): asi sirve en cualquier computador.
+CREATE TABLE sg_configuracion (
+  clave        VARCHAR2(50)   CONSTRAINT pk_sg_configuracion PRIMARY KEY,
+  valor        VARCHAR2(4000) NOT NULL,
+  actualizado  DATE DEFAULT SYSDATE NOT NULL,
+  CONSTRAINT ck_sg_config_clave CHECK (clave = UPPER(clave))
+);
 
 /* =====================================================================
    PARTE 2. DATOS DE LOS CATALOGOS
@@ -1987,6 +1998,18 @@ SELECT p.id,
   JOIN sg_vacante v        ON v.id = p.vacante_id
   JOIN vw_sg_ciudades ci   ON ci.codigo = p.ciudad_codigo;
 
+-- Chats que reciben avisos automaticos (stock bajo, presupuestos, hojas de vida, resumen diario)
+CREATE OR REPLACE VIEW vw_sg_telegram_alertas AS
+SELECT t.chat_id,
+       t.usuario_id,
+       t.emprendimiento_id,
+       e.nombre AS emprendimiento
+  FROM sg_telegram_vinculo t
+  JOIN sg_emprendimiento e ON e.id = t.emprendimiento_id
+ WHERE t.alertas = 'S'
+   AND e.estado  = 'activo';
+
+
 /* =====================================================================
    PARTE 5. PROCEDIMIENTOS Y PAQUETES
    Ninguno imprime con DBMS_OUTPUT: devuelven datos con SYS_REFCURSOR o con
@@ -2178,6 +2201,29 @@ END pkg_sg_reportes;
 -- ---------------------------------------------------------------------
 -- 5.4 PAQUETE DE TELEGRAM (vincular un chat con un usuario de SGAPE)
 -- ---------------------------------------------------------------------
+-- p_activar: 'S' activa, 'N' desactiva, NULL alterna. Devuelve el estado final.
+CREATE OR REPLACE PROCEDURE sp_sg_telegram_alertas (
+    p_chat_id  IN  NUMBER,
+    p_activar  IN  CHAR,
+    p_estado   OUT CHAR
+) AS
+BEGIN
+    IF p_activar IS NOT NULL AND p_activar NOT IN ('S', 'N') THEN
+        RAISE_APPLICATION_ERROR(-20060, 'Usa S para activar o N para desactivar las alertas.');
+    END IF;
+
+    UPDATE sg_telegram_vinculo
+       SET alertas = NVL(p_activar, CASE alertas WHEN 'S' THEN 'N' ELSE 'S' END)
+     WHERE chat_id = p_chat_id
+    RETURNING alertas INTO p_estado;
+
+    IF SQL%ROWCOUNT = 0 THEN
+        RAISE_APPLICATION_ERROR(-20061, 'Este chat no está vinculado a una cuenta de SGAPE.');
+    END IF;
+END sp_sg_telegram_alertas;
+/
+
+
 CREATE OR REPLACE PACKAGE pkg_sg_telegram AS
   FUNCTION  generar_codigo        (p_usuario_id IN NUMBER) RETURN VARCHAR2;
   PROCEDURE vincular              (p_chat_id IN NUMBER, p_codigo IN VARCHAR2,
@@ -2552,6 +2598,26 @@ EXCEPTION
   WHEN DUP_VAL_ON_INDEX THEN
     RAISE_APPLICATION_ERROR(-20403, 'Ya existe un trabajador con ese documento en el emprendimiento.');
 END sp_sg_contratar_postulante;
+/
+
+-- Guarda un valor de configuracion compartida (la aplicacion lo usa para la clave de Groq)
+CREATE OR REPLACE PROCEDURE sp_sg_config_guardar (
+    p_clave IN VARCHAR2,
+    p_valor IN VARCHAR2
+) AS
+    v_clave sg_configuracion.clave%TYPE := UPPER(TRIM(p_clave));
+BEGIN
+    IF v_clave IS NULL OR TRIM(p_valor) IS NULL THEN
+        RAISE_APPLICATION_ERROR(-20070, 'La clave y el valor de la configuración son obligatorios.');
+    END IF;
+
+    MERGE INTO sg_configuracion c
+    USING (SELECT v_clave AS clave FROM dual) x
+       ON (c.clave = x.clave)
+     WHEN MATCHED THEN UPDATE SET c.valor = TRIM(p_valor), c.actualizado = SYSDATE
+     WHEN NOT MATCHED THEN INSERT (clave, valor) VALUES (x.clave, TRIM(p_valor));
+    COMMIT;
+END sp_sg_config_guardar;
 /
 
 
