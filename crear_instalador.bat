@@ -19,7 +19,12 @@ dotnet publish Presentacion\Presentacion.csproj -c Release -r win-x64 --self-con
   -p:EnableCompressionInSingleFile=true -o Publicado
 if errorlevel 1 ( echo [ERROR] Fallo la publicacion. & pause & exit /b 1 )
 
-REM 3) Instalador con Inno Setup (si esta instalado)
+REM 3) Version portable (zip): SGAPE.exe + carpeta conexion. Funciona en cualquier PC sin instalar nada.
+if not exist Instalador\Salida mkdir Instalador\Salida
+powershell -NoProfile -Command "$t='Instalador\Salida\portable\SGAPE'; Remove-Item 'Instalador\Salida\portable' -Recurse -Force -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force -Path \"$t\conexion\" | Out-Null; Copy-Item 'Publicado\SGAPE.exe' $t; Copy-Item 'Distribucion\*' \"$t\conexion\" -Recurse; Compress-Archive -Path 'Instalador\Salida\portable\SGAPE' -DestinationPath 'Instalador\Salida\SGAPE-portable.zip' -Force; Remove-Item 'Instalador\Salida\portable' -Recurse -Force"
+echo [OK] Portable: %CD%\Instalador\Salida\SGAPE-portable.zip
+
+REM 4) Instalador con Inno Setup (si esta instalado)
 set ISCC=%ProgramFiles(x86)%\Inno Setup 6\ISCC.exe
 if not exist "%ISCC%" set ISCC=%ProgramFiles%\Inno Setup 6\ISCC.exe
 if not exist "%ISCC%" set ISCC=%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe

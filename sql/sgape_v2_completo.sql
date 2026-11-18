@@ -2688,10 +2688,20 @@ CREATE OR REPLACE PROCEDURE sp_sg_generar_codigos (
     p_cantidad IN NUMBER DEFAULT 5,
     p_dias     IN NUMBER DEFAULT 30
 ) AS
+    -- Sin O, 0, I ni 1: se confunden al leerlos o dictarlos
+    c_letras CONSTANT VARCHAR2(32) := 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     v_codigo VARCHAR2(20);
+    FUNCTION parte RETURN VARCHAR2 IS
+        v VARCHAR2(4);
+    BEGIN
+        FOR k IN 1 .. 4 LOOP
+            v := v || SUBSTR(c_letras, TRUNC(DBMS_RANDOM.VALUE(1, 33)), 1);
+        END LOOP;
+        RETURN v;
+    END;
 BEGIN
     FOR i IN 1 .. LEAST(NVL(p_cantidad, 5), 100) LOOP
-        v_codigo := 'PRO-' || DBMS_RANDOM.STRING('X', 4) || '-' || DBMS_RANDOM.STRING('X', 4);
+        v_codigo := 'PRO-' || parte || '-' || parte;
         INSERT INTO sg_codigo_activacion (codigo, dias) VALUES (v_codigo, p_dias);
         DBMS_OUTPUT.PUT_LINE(v_codigo || '   (' || p_dias || ' días de Pro)');
     END LOOP;

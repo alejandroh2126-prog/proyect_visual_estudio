@@ -21,9 +21,15 @@ function Plano($segura) {
 # ---------- datos de la VM ----------
 $previo = @{ ip = ''; llave = ''; arq = 'linux-x64' }
 if (Test-Path $recordar) { try { $previo = Get-Content $recordar -Raw | ConvertFrom-Json } catch { } }
-$ip = Preguntar 'IP publica de la VM' $previo.ip
-$llave = Preguntar 'Archivo de la llave SSH (.key)' $previo.llave
-$arq = Preguntar 'Arquitectura: linux-x64 (E2.1.Micro) o linux-arm64 (A1.Flex)' $previo.arq
+# Si PublicadoBot\vm.txt ya tiene los datos, no pregunta nada (para actualizar con doble clic)
+if ($previo.ip -and $previo.llave -and $previo.arq -and (Test-Path $previo.llave)) {
+    $ip = $previo.ip; $llave = $previo.llave; $arq = $previo.arq
+    Write-Host "VM: $ip  ($arq)  llave: $llave"
+} else {
+    $ip = Preguntar 'IP publica de la VM' $previo.ip
+    $llave = Preguntar 'Archivo de la llave SSH (.key)' $previo.llave
+    $arq = Preguntar 'Arquitectura: linux-x64 (E2.1.Micro) o linux-arm64 (A1.Flex)' $previo.arq
+}
 if (-not (Test-Path $llave)) { throw "No existe la llave: $llave" }
 New-Item -ItemType Directory -Force -Path (Split-Path $recordar) | Out-Null
 @{ ip = $ip; llave = $llave; arq = $arq } | ConvertTo-Json | Set-Content $recordar -Encoding UTF8

@@ -12,6 +12,13 @@ $ErrorActionPreference = 'Stop'
 $raiz = Split-Path -Parent $PSScriptRoot
 $destino = Join-Path $raiz 'Distribucion'
 
+# Si ya esta preparada (conexion.json + wallet), se reutiliza sin preguntar nada.
+# Para cambiar la clave o el wallet, borra la carpeta Distribucion y vuelve a ejecutar.
+if ((Test-Path (Join-Path $destino 'conexion.json')) -and (Test-Path (Join-Path $destino 'wallet\tnsnames.ora'))) {
+    Write-Host "[OK] Se usa la conexion que ya esta en $destino"
+    exit 0
+}
+
 # Valores por defecto: los de tu conexion de desarrollo (%LOCALAPPDATA%\SGAPE\conexion.json)
 $walletDefecto = ''
 $dataSource = 'sgape_low'
