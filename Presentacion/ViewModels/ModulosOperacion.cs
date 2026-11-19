@@ -733,6 +733,11 @@ namespace Presentacion.ViewModels
     public partial class ReportesViewModel : ViewModelBase
     {
         [ObservableProperty] private DatosReporte? _datos;
+        [ObservableProperty] private List<PuntoGrafica> _ventasPorMes = new List<PuntoGrafica>();
+        [ObservableProperty] private List<PuntoGrafica> _topProductos = new List<PuntoGrafica>();
+        [ObservableProperty] private List<PuntoGrafica> _gastosPorCategoria = new List<PuntoGrafica>();
+        [ObservableProperty] private List<PuntoGrafica> _nomina = new List<PuntoGrafica>();
+        [ObservableProperty] private string _totalGastos = string.Empty;
 
         public override async Task Cargar()
         {
@@ -740,6 +745,19 @@ namespace Presentacion.ViewModels
             {
                 Emprendimiento e = Sesion.Emprendimiento!;
                 Datos = await Fondo.Run(() => App.Servicios.Reportes.Reunir(e));
+                VentasPorMes = PaletaGraficas.Desde(Datos.VentasPorMes, true, false);
+                List<PuntoGrafica> top = PaletaGraficas.Desde(Datos.TopProductos, true, true);
+                TopProductos = top;
+                GastosPorCategoria = PaletaGraficas.Desde(Logica.Utilidades.Estadisticas.Principales(Datos.GastosPorCategoria, 6), true, true);
+                TotalGastos = PaletaGraficas.Compacto((double)Datos.Finanzas.TotalGastos, true);
+
+                // Nomina: a donde va la plata (neto para los trabajadores y deducciones de salud y pension)
+                ResumenNomina n = Datos.Nomina;
+                Nomina = PaletaGraficas.Desde(new List<ValorEtiquetado>
+                {
+                    new ValorEtiquetado { Etiqueta = "Neto a trabajadores", Valor = n.NominaNeta },
+                    new ValorEtiquetado { Etiqueta = "Deducciones (salud y pensión)", Valor = n.TotalDeducciones }
+                }, true, true);
             });
         }
 
@@ -764,6 +782,33 @@ namespace Presentacion.ViewModels
         [ObservableProperty] private string? _codigo;
         [ObservableProperty] private string? _vence;
         [ObservableProperty] private int _chatsVinculados;
+        [ObservableProperty] private string _usuarioBot = ServicioConfiguracion.UsuarioBotPorDefecto;
+
+        /// <summary>True mientras el codigo sigue vigente (muestra el codigo grande y la cuenta regresiva).</summary>
+        [ObservableProperty] private bool _codigoVigente;
+
+        private DateTime _venceEn;
+        private readonly System.Windows.Threading.DispatcherTimer _reloj = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+
+        public TelegramViewModel()
+        {
+            _reloj.Tick += (s, e) => ActualizarCuenta();
+        }
+
+        public string ArrobaBot { get { return "@" + UsuarioBot; } }
+        public string EnlaceVacantes { get { return "t.me/" + UsuarioBot + "?start=vacantes"; } }
+        partial void OnUsuarioBotChanged(string value)
+        {
+            OnPropertyChanged(nameof(ArrobaBot));
+            OnPropertyChanged(nameof(EnlaceVacantes));
+        }
+
+        /// <summary>El codigo con espacio en el medio (123 456): mas facil de leer y dictar.</summary>
+        public string CodigoGrande
+        {
+            get { return Codigo != null && Codigo.Length == 6 ? Codigo.Substring(0, 3) + " " + Codigo.Substring(3) : Codigo ?? string.Empty; }
+        }
+        partial void OnCodigoChanged(string? value) { OnPropertyChanged(nameof(CodigoGrande)); }
 
         public override async Task Cargar()
         {
@@ -771,6 +816,8 @@ namespace Presentacion.ViewModels
             {
                 int usuario = Sesion.IdUsuario;
                 ChatsVinculados = await Fondo.Run(() => App.Servicios.Telegram.ChatsVinculados(usuario));
+                string? bot = await Fondo.Run(() => App.Servicios.Configuracion.Leer(ServicioConfiguracion.UsuarioBotTelegram));
+                if (!string.IsNullOrWhiteSpace(bot)) UsuarioBot = bot.TrimStart('@');
             });
         }
 
@@ -781,8 +828,34 @@ namespace Presentacion.ViewModels
             {
                 int usuario = Sesion.IdUsuario;
                 Codigo = await Fondo.Run(() => App.Servicios.Telegram.GenerarCodigo(usuario));
-                Vence = "Vence a las " + DateTime.Now.AddMinutes(10).ToString("HH:mm") + ". Escríbele al bot: /vincular " + Codigo;
+                _venceEn = DateTime.Now.AddMinutes(10);
+                CodigoVigente = true;
+                ActualizarCuenta();
+                _reloj.Start();
             });
+        }
+
+        private void ActualizarCuenta()
+        {
+            TimeSpan falta = _venceEn - DateTime.Now;
+            if (falta <= TimeSpan.Zero)
+            {
+                _reloj.Stop();
+                CodigoVigente = false;
+                Codigo = null;
+                Vence = "El código venció. Genera uno nuevo.";
+                return;
+            }
+            Vence = "Vence en " + falta.ToString(@"mm\:ss") + " · se usa una sola vez";
+        }
+
+        /// <summary>Abre Telegram con el codigo: el bot vincula el chat con un solo toque (t.me/bot?start=vincular_123456).</summary>
+        [RelayCommand]
+        private void AbrirTelegram()
+        {
+            string enlace = "https://t.me/" + UsuarioBot + (CodigoVigente && Codigo != null ? "?start=vincular_" + Codigo : string.Empty);
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(enlace) { UseShellExecute = true }); }
+            catch (Exception) { Notificador.Error("No se pudo abrir el navegador. Entra a " + enlace); }
         }
 
         [RelayCommand]
@@ -791,6 +864,13 @@ namespace Presentacion.ViewModels
             if (string.IsNullOrEmpty(Codigo)) return;
             try { Clipboard.SetText("/vincular " + Codigo); Notificador.Exito("Copiado. Pégalo en el chat del bot."); }
             catch (Exception) { Notificador.Error("No se pudo copiar. Escribe el código a mano."); }
+        }
+
+        [RelayCommand]
+        private void CopiarEnlaceVacantes()
+        {
+            try { Clipboard.SetText("https://" + EnlaceVacantes); Notificador.Exito("Enlace copiado. Compártelo en tus redes o en WhatsApp."); }
+            catch (Exception) { Notificador.Error("No se pudo copiar el enlace."); }
         }
     }
 }

@@ -1,7 +1,8 @@
 <UserControl x:Class="Presentacion.Vistas.ReportesView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes">
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:c="clr-namespace:Presentacion.Comun">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
         <StackPanel>
             <DockPanel>
@@ -36,42 +37,66 @@
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition />
-                    <ColumnDefinition />
-                    <ColumnDefinition />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
                 <md:Card Style="{StaticResource Tarjeta}">
                     <StackPanel>
-                        <TextBlock Text="Ventas por mes" FontWeight="SemiBold" Margin="0,0,0,8" />
-                        <DataGrid ItemsSource="{Binding Datos.VentasPorMes}" Style="{StaticResource Tabla}">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Mes" Binding="{Binding Etiqueta}" Width="*" />
-                                <DataGridTextColumn Header="Total" Binding="{Binding Valor, Converter={StaticResource Moneda}}" />
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <md:PackIcon Kind="ChartBar" Width="22" Height="22" Foreground="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Ventas por mes" Style="{StaticResource TituloTarjeta}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <c:GraficaBarras Datos="{Binding VentasPorMes}" Height="260" Relleno="{DynamicResource PrimaryHueMidBrush}" TextoVacio="Aún no hay ventas" />
                     </StackPanel>
                 </md:Card>
                 <md:Card Grid.Column="1" Style="{StaticResource Tarjeta}">
                     <StackPanel>
-                        <TextBlock Text="Más vendidos" FontWeight="SemiBold" Margin="0,0,0,8" />
-                        <DataGrid ItemsSource="{Binding Datos.TopProductos}" Style="{StaticResource Tabla}">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Producto" Binding="{Binding Etiqueta}" Width="*" />
-                                <DataGridTextColumn Header="Und." Binding="{Binding Cantidad}" />
-                                <DataGridTextColumn Header="Ingresos" Binding="{Binding Valor, Converter={StaticResource Moneda}}" />
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <md:PackIcon Kind="Trophy" Width="22" Height="22" Foreground="#FFB300" VerticalAlignment="Center" />
+                            <TextBlock Text="Más vendidos (ingresos)" Style="{StaticResource TituloTarjeta}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <c:GraficaBarras Datos="{Binding TopProductos}" Horizontal="True" Height="260" TextoVacio="Aún no hay ventas" />
                     </StackPanel>
                 </md:Card>
-                <md:Card Grid.Column="2" Style="{StaticResource Tarjeta}">
+            </Grid>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <md:Card Style="{StaticResource Tarjeta}">
                     <StackPanel>
-                        <TextBlock Text="Gastos por categoría" FontWeight="SemiBold" Margin="0,0,0,8" />
-                        <DataGrid ItemsSource="{Binding Datos.GastosPorCategoria}" Style="{StaticResource Tabla}">
-                            <DataGrid.Columns>
-                                <DataGridTextColumn Header="Categoría" Binding="{Binding Etiqueta}" Width="*" />
-                                <DataGridTextColumn Header="Total" Binding="{Binding Valor, Converter={StaticResource Moneda}}" />
-                            </DataGrid.Columns>
-                        </DataGrid>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <md:PackIcon Kind="ChartPie" Width="22" Height="22" Foreground="{DynamicResource PrimaryHueMidBrush}" VerticalAlignment="Center" />
+                            <TextBlock Text="Gastos por categoría" Style="{StaticResource TituloTarjeta}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="210" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <c:GraficaDona Datos="{Binding GastosPorCategoria}" Height="220" Centro="{Binding TotalGastos}" CentroDetalle="en gastos"
+                                           Background="{DynamicResource MaterialDesignCardBackground}" TextoVacio="Aún no hay gastos" />
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding GastosPorCategoria}" ItemTemplate="{StaticResource Leyenda}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                        </Grid>
+                    </StackPanel>
+                </md:Card>
+                <md:Card Grid.Column="1" Style="{StaticResource Tarjeta}">
+                    <StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <md:PackIcon Kind="AccountCash" Width="22" Height="22" Foreground="#8E24AA" VerticalAlignment="Center" />
+                            <TextBlock Text="Nómina del mes" Style="{StaticResource TituloTarjeta}" Margin="8,0,0,0" VerticalAlignment="Center" />
+                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="210" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <c:GraficaDona Datos="{Binding Nomina}" Height="220" Centro="{Binding Datos.Nomina.NominaMensual, Converter={StaticResource Moneda}}" CentroDetalle="mensual"
+                                           Background="{DynamicResource MaterialDesignCardBackground}" TextoVacio="Aún no hay trabajadores activos" />
+                            <ItemsControl Grid.Column="1" ItemsSource="{Binding Nomina}" ItemTemplate="{StaticResource Leyenda}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                        </Grid>
                     </StackPanel>
                 </md:Card>
             </Grid>

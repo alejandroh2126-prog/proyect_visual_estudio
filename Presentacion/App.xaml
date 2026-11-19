@@ -23,39 +23,87 @@
             <c:TipoCampoAVisibleConverter x:Key="TipoCampoAVisible" />
             <c:EstadoPostulacionConverter x:Key="EstadoPostulacion" />
             <c:TamanoConverter x:Key="Tamano" />
+            <c:IgualesAVisibleConverter x:Key="IgualesAVisible" />
+            <c:BoolAVisibleInvertidoConverter x:Key="BoolAInvisible" />
+
+            <!-- Tamaño de toda la interfaz (seccion Apariencia). Apariencia.Aplicar lo reemplaza. -->
+            <ScaleTransform x:Key="EscalaInterfaz" ScaleX="1" ScaleY="1" />
 
             <!-- Estilos propios -->
             <Style x:Key="TituloSeccion" TargetType="TextBlock" BasedOn="{StaticResource MaterialDesignHeadline5TextBlock}">
-                <Setter Property="Margin" Value="0,0,0,12" />
-                <Setter Property="Foreground" Value="{DynamicResource PrimaryHueDarkBrush}" />
+                <Setter Property="Margin" Value="0,0,0,14" />
+                <Setter Property="FontSize" Value="26" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Foreground" Value="{DynamicResource PrimaryHueMidBrush}" />
+            </Style>
+            <Style x:Key="Subtitulo" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="15" />
+                <Setter Property="Opacity" Value="0.72" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+            </Style>
+            <Style x:Key="TituloTarjeta" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="16.5" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
             <Style x:Key="BotonBarra" TargetType="Button" BasedOn="{StaticResource MaterialDesignOutlinedButton}">
                 <Setter Property="Margin" Value="0,0,8,0" />
+                <Setter Property="md:ButtonAssist.CornerRadius" Value="10" />
             </Style>
             <Style x:Key="BotonPrincipal" TargetType="Button" BasedOn="{StaticResource MaterialDesignRaisedButton}">
                 <Setter Property="Margin" Value="0,0,8,0" />
+                <Setter Property="md:ButtonAssist.CornerRadius" Value="10" />
             </Style>
             <Style x:Key="Tarjeta" TargetType="md:Card">
-                <Setter Property="Padding" Value="16" />
-                <Setter Property="Margin" Value="0,0,12,12" />
-                <Setter Property="UniformCornerRadius" Value="8" />
+                <Setter Property="Padding" Value="20" />
+                <Setter Property="Margin" Value="0,0,14,14" />
+                <Setter Property="UniformCornerRadius" Value="16" />
+                <Setter Property="md:ElevationAssist.Elevation" Value="Dp2" />
             </Style>
             <Style x:Key="EtiquetaKpi" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="12" />
-                <Setter Property="Foreground" Value="{DynamicResource MaterialDesignBodyLight}" />
+                <Setter Property="FontSize" Value="13.5" />
+                <Setter Property="Opacity" Value="0.7" />
+                <Setter Property="TextWrapping" Value="Wrap" />
             </Style>
             <Style x:Key="ValorKpi" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="22" />
-                <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="Margin" Value="0,4,0,0" />
+                <Setter Property="FontSize" Value="24" />
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Margin" Value="0,2,0,0" />
+                <Setter Property="TextTrimming" Value="CharacterEllipsis" />
             </Style>
+            <!-- Circulo de color con el icono de cada indicador (Tag = color) -->
+            <Style x:Key="IconoKpi" TargetType="Border">
+                <Setter Property="Width" Value="52" />
+                <Setter Property="Height" Value="52" />
+                <Setter Property="CornerRadius" Value="16" />
+                <Setter Property="Margin" Value="0,0,14,0" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
+            <!-- Leyenda de las graficas (color, nombre, valor y porcentaje) -->
+            <DataTemplate x:Key="Leyenda" DataType="{x:Type c:PuntoGrafica}">
+                <Grid Margin="0,3">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Border Width="12" Height="12" CornerRadius="4" Background="{Binding Color}" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="1" Text="{Binding Etiqueta}" Margin="8,0" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                    <TextBlock Grid.Column="2" VerticalAlignment="Center" FontWeight="SemiBold">
+                        <Run Text="{Binding Texto, Mode=OneWay}" /><Run Text="  " /><Run Text="{Binding Porcentaje, Mode=OneWay}" Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                    </TextBlock>
+                </Grid>
+            </DataTemplate>
             <Style x:Key="Tabla" TargetType="DataGrid" BasedOn="{StaticResource MaterialDesignDataGrid}">
                 <Setter Property="AutoGenerateColumns" Value="False" />
                 <Setter Property="IsReadOnly" Value="True" />
                 <Setter Property="CanUserAddRows" Value="False" />
                 <Setter Property="SelectionMode" Value="Single" />
                 <Setter Property="HeadersVisibility" Value="Column" />
-                <Setter Property="md:DataGridAssist.CellPadding" Value="12,8" />
+                <Setter Property="md:DataGridAssist.CellPadding" Value="12,9" />
+                <Setter Property="md:DataGridAssist.ColumnHeaderPadding" Value="12,10" />
+                <Setter Property="FontSize" Value="14" />
+                <Setter Property="Background" Value="Transparent" />
             </Style>
             <Style x:Key="Buscador" TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
                 <Setter Property="Width" Value="260" />
@@ -77,6 +125,7 @@
             <DataTemplate DataType="{x:Type vm:AsistenteViewModel}"><v:AsistenteView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:MiPlanViewModel}"><v:MiPlanView /></DataTemplate>
             <DataTemplate DataType="{x:Type vm:TelegramViewModel}"><v:TelegramView /></DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AparienciaViewModel}"><v:AparienciaView /></DataTemplate>
             <DataTemplate DataType="{x:Type c:FormularioViewModel}"><c:FormularioDialogo /></DataTemplate>
             <DataTemplate DataType="{x:Type c:ConfirmacionViewModel}"><c:ConfirmacionDialogo /></DataTemplate>
         </ResourceDictionary>

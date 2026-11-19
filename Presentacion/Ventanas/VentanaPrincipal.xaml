@@ -8,73 +8,188 @@
         WindowStartupLocation="CenterScreen" WindowState="Maximized"
         Background="{DynamicResource MaterialDesignPaper}"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
-        FontFamily="{md:MaterialDesignFont}">
-    <md:DialogHost Identifier="Raiz" CloseOnClickAway="False">
+        FontFamily="{md:MaterialDesignFont}" FontSize="14.5">
+    <Window.Resources>
+        <!-- Opcion del menu lateral: pastilla redondeada; la elegida se resalta y lleva una barrita del color de acento -->
+        <Style x:Key="ItemMenu" TargetType="ListBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource PrimaryHueDarkForegroundBrush}" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                        <Grid Margin="10,3">
+                            <Border x:Name="Fondo" CornerRadius="12" Background="Transparent" />
+                            <Border x:Name="Marca" Width="4" CornerRadius="2" HorizontalAlignment="Left" Margin="0,9"
+                                    Background="{DynamicResource SecondaryHueMidBrush}" Visibility="Collapsed" />
+                            <ContentPresenter Margin="12,10" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Fondo" Property="Background" Value="#1FFFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Fondo" Property="Background" Value="#38FFFFFF" />
+                                <Setter TargetName="Marca" Property="Visibility" Value="Visible" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- El menu se abre y se cierra con una animacion -->
+        <Style x:Key="MenuLateral" TargetType="Border">
+            <Setter Property="Width" Value="250" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding MenuAbierto}" Value="False">
+                    <DataTrigger.EnterActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="Width" To="78" Duration="0:0:0.22">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.EnterActions>
+                    <DataTrigger.ExitActions>
+                        <BeginStoryboard>
+                            <Storyboard>
+                                <DoubleAnimation Storyboard.TargetProperty="Width" To="250" Duration="0:0:0.22">
+                                    <DoubleAnimation.EasingFunction><CubicEase EasingMode="EaseOut" /></DoubleAnimation.EasingFunction>
+                                </DoubleAnimation>
+                            </Storyboard>
+                        </BeginStoryboard>
+                    </DataTrigger.ExitActions>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <md:DialogHost Identifier="Raiz" CloseOnClickAway="False" LayoutTransform="{DynamicResource EscalaInterfaz}">
         <Grid>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="230" />
+                <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto" />
-                <RowDefinition Height="*" />
-            </Grid.RowDefinitions>
 
-            <!-- Barra superior -->
-            <md:ColorZone Grid.ColumnSpan="2" Mode="PrimaryDark" Padding="16,10">
-                <DockPanel>
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
-                        <md:PackIcon Kind="StorefrontOutline" Width="28" Height="28" VerticalAlignment="Center" />
-                        <TextBlock Text="SGAPE" FontSize="22" FontWeight="Bold" Margin="8,0,24,0" VerticalAlignment="Center" />
-                        <Border Background="White" CornerRadius="4" Padding="8,2" VerticalAlignment="Center">
-                            <ComboBox Width="300" ItemsSource="{Binding Emprendimientos}" SelectedItem="{Binding EmprendimientoActual}"
-                                      md:HintAssist.Hint="Elige un emprendimiento" Foreground="#212121" ToolTip="Emprendimiento con el que trabajas" />
-                        </Border>
-                        <TextBlock Text="Crea tu primer emprendimiento en la sección Emprendimientos" Margin="16,0,0,0" VerticalAlignment="Center"
-                                   Visibility="{Binding SinEmprendimientos, Converter={StaticResource BoolAVisible}}" />
-                    </StackPanel>
-                    <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" HorizontalAlignment="Right">
-                        <Button Command="{Binding VerPlanCommand}" ToolTip="Ver mi plan" Margin="0,0,16,0" Padding="12,2" Height="28"
-                                Style="{StaticResource MaterialDesignOutlinedButton}" Foreground="White" BorderBrush="White">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="CrownOutline" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding TextoPlan}" Margin="6,0,0,0" VerticalAlignment="Center" />
-                            </StackPanel>
-                        </Button>
-                        <md:PackIcon Kind="AccountCircle" Width="24" Height="24" VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding NombreUsuario}" Margin="6,0,16,0" VerticalAlignment="Center" />
-                        <Button Style="{StaticResource MaterialDesignFlatButton}" Foreground="White" Command="{Binding CerrarSesionCommand}" ToolTip="Cerrar sesión">
-                            <StackPanel Orientation="Horizontal">
-                                <md:PackIcon Kind="Logout" VerticalAlignment="Center" />
-                                <TextBlock Text="Salir" Margin="6,0,0,0" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
-                </DockPanel>
-            </md:ColorZone>
+            <!-- ============ MENU LATERAL (se puede esconder) ============ -->
+            <Border Style="{StaticResource MenuLateral}" Background="{DynamicResource PrimaryHueDarkBrush}" ClipToBounds="True">
+                <Grid>
+                    <!-- Brillo suave de arriba hacia abajo: se ve bien con cualquier color elegido -->
+                    <Border IsHitTestVisible="False">
+                        <Border.Background>
+                            <LinearGradientBrush StartPoint="0,0" EndPoint="0.4,1">
+                                <GradientStop Color="#30FFFFFF" Offset="0" />
+                                <GradientStop Color="#00FFFFFF" Offset="0.45" />
+                                <GradientStop Color="#33000000" Offset="1" />
+                            </LinearGradientBrush>
+                        </Border.Background>
+                    </Border>
+                    <Ellipse Width="220" Height="220" Fill="#12FFFFFF" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-110,-70" IsHitTestVisible="False" />
 
-            <!-- Menu lateral -->
-            <Border Grid.Row="1" BorderBrush="{DynamicResource MaterialDesignDivider}" BorderThickness="0,0,1,0">
-                <ListBox ItemsSource="{Binding Secciones}" SelectedItem="{Binding SeccionActual}" Margin="0,8,0,0">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate DataType="{x:Type vm:Seccion}">
-                            <StackPanel Orientation="Horizontal" Margin="8,6">
-                                <md:PackIcon Kind="{Binding Icono}" Width="22" Height="22" VerticalAlignment="Center" />
-                                <TextBlock Text="{Binding Nombre}" FontSize="15" Margin="14,0,0,0" VerticalAlignment="Center" />
-                                <md:PackIcon Kind="LockOutline" Width="16" Height="16" Margin="8,0,0,0" VerticalAlignment="Center" Opacity="0.6"
-                                             ToolTip="Plan Pro" Visibility="{Binding Bloqueada, Converter={StaticResource BoolAVisible}}" />
+                    <DockPanel>
+                        <!-- Logo y boton para esconder el menu -->
+                        <Grid DockPanel.Dock="Top" Margin="14,16,10,18">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding AlternarMenuCommand}"
+                                    Foreground="{DynamicResource PrimaryHueDarkForegroundBrush}" Width="48" Height="48"
+                                    ToolTip="Mostrar u ocultar el menú">
+                                <md:PackIcon Kind="Menu" Width="26" Height="26" />
+                            </Button>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="6,0,0,0"
+                                        Visibility="{Binding MenuAbierto, Converter={StaticResource BoolAVisible}}">
+                                <Border Width="34" Height="34" CornerRadius="10" Background="#33FFFFFF">
+                                    <md:PackIcon Kind="StorefrontOutline" Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                 Foreground="{DynamicResource PrimaryHueDarkForegroundBrush}" />
+                                </Border>
+                                <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                    <TextBlock Text="SGAPE" FontSize="21" FontWeight="Black" Foreground="{DynamicResource PrimaryHueDarkForegroundBrush}" />
+                                    <TextBlock Text="Tu negocio en orden" FontSize="11.5" Opacity="0.8" Foreground="{DynamicResource PrimaryHueDarkForegroundBrush}" />
+                                </StackPanel>
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                        </Grid>
+
+                        <TextBlock DockPanel.Dock="Bottom" Text="v2 · Universidad Popular del Cesar" FontSize="11" Opacity="0.65" Margin="22,8,12,14"
+                                   Foreground="{DynamicResource PrimaryHueDarkForegroundBrush}" TextWrapping="Wrap"
+                                   Visibility="{Binding MenuAbierto, Converter={StaticResource BoolAVisible}}" />
+
+                        <ListBox ItemsSource="{Binding Secciones}" SelectedItem="{Binding SeccionActual}" ItemContainerStyle="{StaticResource ItemMenu}"
+                                 Background="Transparent" BorderThickness="0"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Auto">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type vm:Seccion}">
+                                    <StackPanel Orientation="Horizontal" ToolTip="{Binding Nombre}">
+                                        <md:PackIcon Kind="{Binding Icono}" Width="24" Height="24" VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Nombre}" FontSize="15.5" FontWeight="Medium" Margin="16,0,0,0" VerticalAlignment="Center"
+                                                   Visibility="{Binding DataContext.MenuAbierto, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BoolAVisible}}" />
+                                        <md:PackIcon Kind="LockOutline" Width="16" Height="16" Margin="8,0,0,0" VerticalAlignment="Center" Opacity="0.7"
+                                                     ToolTip="Plan Pro" Visibility="{Binding Bloqueada, Converter={StaticResource BoolAVisible}}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Grid>
             </Border>
 
-            <!-- Contenido de la seccion -->
-            <Grid Grid.Row="1" Grid.Column="1">
-                <ContentControl Content="{Binding SeccionActual.ViewModel}" Margin="24,20,24,12" />
-                <ProgressBar VerticalAlignment="Top" IsIndeterminate="True" Height="3"
-                             Visibility="{Binding SeccionActual.ViewModel.Ocupado, Converter={StaticResource BoolAVisible}}" />
-                <md:Snackbar MessageQueue="{x:Static c:Notificador.Cola}" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+            <!-- ============ BARRA SUPERIOR Y CONTENIDO ============ -->
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <md:Card UniformCornerRadius="0" md:ElevationAssist.Elevation="Dp1" Padding="20,10">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left" VerticalAlignment="Center">
+                            <md:PackIcon Kind="StoreOutline" Width="24" Height="24" VerticalAlignment="Center" Foreground="{DynamicResource PrimaryHueMidBrush}" />
+                            <ComboBox Width="320" Margin="10,0,0,0" ItemsSource="{Binding Emprendimientos}" SelectedItem="{Binding EmprendimientoActual}"
+                                      Style="{StaticResource MaterialDesignOutlinedComboBox}" Padding="10,6" FontSize="15"
+                                      md:HintAssist.Hint="Elige un emprendimiento" ToolTip="Emprendimiento con el que trabajas" />
+                            <TextBlock Text="Crea tu primer emprendimiento en la sección Emprendimientos" Margin="16,0,0,0" VerticalAlignment="Center" Opacity="0.75"
+                                       Visibility="{Binding SinEmprendimientos, Converter={StaticResource BoolAVisible}}" />
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
+                            <Button Command="{Binding VerPlanCommand}" ToolTip="Ver mi plan" Margin="0,0,10,0" Padding="14,4" Height="34"
+                                    Style="{StaticResource MaterialDesignRaisedSecondaryButton}" md:ButtonAssist.CornerRadius="17">
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="Crown" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding TextoPlan}" Margin="6,0,0,0" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                </StackPanel>
+                            </Button>
+                            <Button Style="{StaticResource MaterialDesignIconButton}" Command="{Binding CambiarModoCommand}" ToolTip="Modo claro / oscuro" Margin="0,0,4,0">
+                                <Grid>
+                                    <md:PackIcon Kind="WeatherNight" Width="24" Height="24" Visibility="{Binding EsOscuro, Converter={StaticResource BoolAInvisible}}" />
+                                    <md:PackIcon Kind="WhiteBalanceSunny" Width="24" Height="24" Visibility="{Binding EsOscuro, Converter={StaticResource BoolAVisible}}" />
+                                </Grid>
+                            </Button>
+                            <Border Width="36" Height="36" CornerRadius="18" Background="{DynamicResource PrimaryHueMidBrush}" Margin="8,0,8,0">
+                                <md:PackIcon Kind="Account" Width="22" Height="22" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                             Foreground="{DynamicResource PrimaryHueMidForegroundBrush}" />
+                            </Border>
+                            <TextBlock Text="{Binding NombreUsuario}" Margin="0,0,12,0" VerticalAlignment="Center" FontWeight="SemiBold" />
+                            <Button Style="{StaticResource MaterialDesignOutlinedButton}" Command="{Binding CerrarSesionCommand}" ToolTip="Cerrar sesión"
+                                    md:ButtonAssist.CornerRadius="10" Height="34">
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="Logout" VerticalAlignment="Center" />
+                                    <TextBlock Text="Salir" Margin="6,0,0,0" />
+                                </StackPanel>
+                            </Button>
+                        </StackPanel>
+                    </DockPanel>
+                </md:Card>
+
+                <!-- Contenido de la seccion -->
+                <Grid Grid.Row="1">
+                    <ContentControl Content="{Binding SeccionActual.ViewModel}" Margin="28,22,28,12" />
+                    <ProgressBar VerticalAlignment="Top" IsIndeterminate="True" Height="3"
+                                 Visibility="{Binding SeccionActual.ViewModel.Ocupado, Converter={StaticResource BoolAVisible}}" />
+                    <md:Snackbar MessageQueue="{x:Static c:Notificador.Cola}" HorizontalAlignment="Center" VerticalAlignment="Bottom" />
+                </Grid>
             </Grid>
         </Grid>
     </md:DialogHost>

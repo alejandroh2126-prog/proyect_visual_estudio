@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Datos;
 using Entidades;
 using Logica.Pdf;
@@ -17,15 +18,43 @@ namespace Logica.Servicios
         private readonly ServicioInventario _inventario;
         private readonly ServicioPresupuestos _presupuestos;
         private readonly ServicioPlanes _planes;
+        private readonly ServicioFinanzas _finanzas;
 
         public ServicioReportes(IReporteDao reportes, ServicioVentas ventas, ServicioInventario inventario,
-                                ServicioPresupuestos presupuestos, ServicioPlanes planes)
+                                ServicioPresupuestos presupuestos, ServicioPlanes planes, ServicioFinanzas finanzas)
         {
             _planes = planes;
             _reportes = reportes;
             _ventas = ventas;
             _inventario = inventario;
             _presupuestos = presupuestos;
+            _finanzas = finanzas;
+        }
+
+        /// <summary>
+        /// Indicadores y graficas del Inicio (plan Gratis tambien). Las sumas grandes las hace Oracle
+        /// (resumen, top productos, gastos por categoria); los agrupados por dia y mes salen de las listas.
+        /// </summary>
+        public DatosTablero Tablero(int emprendimientoId)
+        {
+            DateTime hoy = DateTime.Now;
+            List<Producto> productos = _inventario.Listar(emprendimientoId);
+            List<Presupuesto> enAlerta = new List<Presupuesto>();
+            foreach (Presupuesto p in _presupuestos.Listar(emprendimientoId, Validar.MesActual()))
+                if (p.Estado != Presupuesto.EstadoOk) enAlerta.Add(p);
+
+            return new DatosTablero
+            {
+                Resumen = Resumen(emprendimientoId),
+                Ventas = _ventas.Resumen(emprendimientoId),
+                VentasPorDia = Estadisticas.VentasPorDia(_ventas.Listar(emprendimientoId), hoy, 14),
+                IngresosGastos = Estadisticas.IngresosGastosPorMes(_finanzas.Listar(emprendimientoId), hoy, 6),
+                GastosPorCategoria = Estadisticas.Principales(_reportes.GastosPorCategoria(emprendimientoId, null), 6),
+                TopProductos = _reportes.TopProductos(emprendimientoId, 5),
+                EstadoInventario = Estadisticas.EstadoInventario(productos),
+                StockBajo = _inventario.StockBajo(emprendimientoId),
+                PresupuestosEnAlerta = enAlerta
+            };
         }
 
         public ResumenEmprendimiento Resumen(int emprendimientoId)

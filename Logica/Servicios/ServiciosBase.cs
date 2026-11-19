@@ -293,6 +293,10 @@ namespace Logica.Servicios
         public const string ClaveGroq = "GROQ_API_KEY";
         public const string ModeloGroq = "GROQ_MODELO";
 
+        /// <summary>Usuario del bot de Telegram (lo guarda el bot al iniciar; la aplicacion arma los enlaces t.me/...).</summary>
+        public const string UsuarioBotTelegram = "TELEGRAM_BOT_USUARIO";
+        public const string UsuarioBotPorDefecto = "sgape_bot";
+
         private readonly IConfiguracionDao _dao;
         public ServicioConfiguracion(IConfiguracionDao dao) { _dao = dao; }
 

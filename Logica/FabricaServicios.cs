@@ -52,7 +52,7 @@ namespace Logica
             Finanzas = new ServicioFinanzas(fabricaDao.CrearMovimientoDao(), fabricaDao.CrearObligacionSocioDao(), _reportes, Catalogos);
             Presupuestos = new ServicioPresupuestos(fabricaDao.CrearPresupuestoDao(), Catalogos);
             Vacantes = new ServicioVacantes(fabricaDao.CrearVacanteDao(), fabricaDao.CrearPostulacionDao(), cargos, Catalogos);
-            Reportes = new ServicioReportes(_reportes, Ventas, Inventario, Presupuestos, Planes);
+            Reportes = new ServicioReportes(_reportes, Ventas, Inventario, Presupuestos, Planes, Finanzas);
             Telegram = new ServicioTelegram(fabricaDao.CrearTelegramDao(), Planes);
             Configuracion = new ServicioConfiguracion(fabricaDao.CrearConfiguracionDao());
         }

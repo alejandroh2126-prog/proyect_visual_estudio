@@ -62,8 +62,27 @@ namespace Presentacion.ViewModels
         [ObservableProperty] private Seccion? _seccionActual;
         [ObservableProperty] private bool _sinEmprendimientos;
 
+        /// <summary>Menu lateral abierto (con nombres) o cerrado (solo iconos). Se recuerda entre sesiones.</summary>
+        [ObservableProperty] private bool _menuAbierto = Apariencia.Actual.MenuAbierto;
+
+        public bool EsOscuro { get { return Apariencia.Actual.Oscuro; } }
+
+        partial void OnMenuAbiertoChanged(bool value)
+        {
+            Apariencia.Actual.MenuAbierto = value;
+            Apariencia.Guardar();
+        }
+
+        [RelayCommand]
+        private void AlternarMenu() { MenuAbierto = !MenuAbierto; }
+
+        /// <summary>Boton de la barra superior: cambia entre modo claro y oscuro.</summary>
+        [RelayCommand]
+        private void CambiarModo() { Apariencia.Cambiar(p => p.Oscuro = !p.Oscuro); }
+
         public PrincipalViewModel()
         {
+            Apariencia.Cambio += () => OnPropertyChanged(nameof(EsOscuro));
             _miPlan = new Seccion("Mi plan", PackIconKind.CrownOutline, new MiPlanViewModel(ActualizarPlan), false);
             Secciones = new List<Seccion>
             {
@@ -78,7 +97,8 @@ namespace Presentacion.ViewModels
                 new Seccion("Reportes", PackIconKind.FilePdfBox, new ReportesViewModel(), true, true),
                 new Seccion("Asistente", PackIconKind.RobotOutline, new AsistenteViewModel(), true, true),
                 new Seccion("Telegram", PackIconKind.SendCircleOutline, new TelegramViewModel(), false, true),
-                _miPlan
+                _miPlan,
+                new Seccion("Apariencia", PackIconKind.PaletteOutline, new AparienciaViewModel(), false)
             };
         }
 

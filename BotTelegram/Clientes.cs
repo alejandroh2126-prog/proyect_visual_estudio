@@ -136,20 +136,73 @@ namespace BotTelegram
             return await _http.GetByteArrayAsync(new Uri("https://api.telegram.org/file/bot" + _token + "/" + ruta), ct);
         }
 
+        /// <summary>
+        /// Teclado fijo debajo de la caja de texto (reply keyboard). Cada boton envia su texto como mensaje.
+        /// Asi el aspirante solo ve "Vincular" y "Vacantes", y el dueño vinculado ve su menu completo.
+        /// </summary>
+        public async Task EnviarMenu(long chatId, string texto, List<List<string>> filas, CancellationToken ct = default)
+        {
+            JsonArray teclado = new JsonArray();
+            foreach (List<string> fila in filas)
+            {
+                JsonArray f = new JsonArray();
+                foreach (string b in fila) f.Add(new JsonObject { ["text"] = b });
+                teclado.Add(f);
+            }
+            JsonObject cuerpo = new JsonObject
+            {
+                ["chat_id"] = chatId,
+                ["text"] = texto,
+                ["reply_markup"] = new JsonObject { ["keyboard"] = teclado, ["resize_keyboard"] = true, ["is_persistent"] = true }
+            };
+            await Llamar("sendMessage", cuerpo, ct);
+        }
+
+        // Menu de comandos (boton "Menú" de Telegram). Quien NO esta vinculado solo ve estos:
+        private static readonly (string, string)[] ComandosPublicos =
+        {
+            ("vincular", "Vincular mi cuenta de SGAPE"), ("vacantes", "Ver vacantes y enviar hoja de vida"),
+            ("ayuda", "Ayuda"), ("cancelar", "Cancelar lo que estás haciendo")
+        };
+
+        // ...y un chat vinculado ve el menu completo (se registra SOLO para ese chat).
+        private static readonly (string, string)[] ComandosVinculado =
+        {
+            ("menu", "Mostrar los botones"), ("resumen", "Resumen del emprendimiento"), ("ventas", "Ventas de hoy"),
+            ("stock", "Productos con stock bajo"), ("reporte", "Reporte en PDF"), ("presupuestos", "Presupuestos del mes"),
+            ("nomina", "Nómina"), ("postulaciones", "Hojas de vida por revisar"), ("preguntas", "Preguntas sugeridas"),
+            ("alertas", "Activar o desactivar avisos"), ("emprendimientos", "Cambiar de emprendimiento"),
+            ("desvincular", "Desvincular este chat"), ("ayuda", "Ayuda"), ("cancelar", "Cancelar lo que estás haciendo")
+        };
+
+        private static JsonArray Lista((string, string)[] comandos)
+        {
+            JsonArray lista = new JsonArray();
+            foreach ((string c, string d) in comandos) lista.Add(new JsonObject { ["command"] = c, ["description"] = d });
+            return lista;
+        }
+
+        /// <summary>Menu por defecto (para todos los chats): solo vincular y vacantes.</summary>
         public async Task RegistrarComandos(CancellationToken ct)
         {
-            JsonArray comandos = new JsonArray();
-            foreach ((string c, string d) in new[]
-            {
-                ("resumen", "Resumen del emprendimiento"), ("reporte", "Reporte en PDF"), ("stock", "Productos con stock bajo"),
-                ("presupuestos", "Presupuestos del mes"), ("nomina", "Nómina"), ("ventas", "Ventas de hoy"),
-                ("postulaciones", "Hojas de vida por revisar"), ("alertas", "Activar o desactivar avisos"),
-                ("emprendimientos", "Cambiar de emprendimiento"),
-                ("vacantes", "Ver vacantes y enviar hoja de vida"), ("vincular", "Vincular tu cuenta de SGAPE"),
-                ("ayuda", "Ayuda"), ("cancelar", "Cancelar lo que estás haciendo")
-            })
-                comandos.Add(new JsonObject { ["command"] = c, ["description"] = d });
-            await Llamar("setMyCommands", new JsonObject { ["commands"] = comandos }, ct);
+            await Llamar("setMyCommands", new JsonObject { ["commands"] = Lista(ComandosPublicos) }, ct);
+        }
+
+        /// <summary>Menu de un chat: completo si esta vinculado; si no, se borra y vuelve al menu publico.</summary>
+        public async Task ComandosDeChat(long chatId, bool vinculado, CancellationToken ct = default)
+        {
+            JsonObject alcance = new JsonObject { ["type"] = "chat", ["chat_id"] = chatId };
+            if (vinculado)
+                await Llamar("setMyCommands", new JsonObject { ["commands"] = Lista(ComandosVinculado), ["scope"] = alcance }, ct);
+            else
+                await Llamar("deleteMyCommands", new JsonObject { ["scope"] = alcance }, ct);
+        }
+
+        /// <summary>Nombre de usuario del bot (getMe), por ejemplo "sgape_bot".</summary>
+        public async Task<string> UsuarioDelBot(CancellationToken ct)
+        {
+            JsonNode? yo = await Llamar("getMe", new JsonObject(), ct);
+            return yo?["username"]?.ToString() ?? string.Empty;
         }
 
         private static JsonObject Teclado(List<List<Boton>> filas)

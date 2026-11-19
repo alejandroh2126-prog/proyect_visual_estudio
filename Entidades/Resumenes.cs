@@ -85,6 +85,28 @@ namespace Entidades
         public int Cantidad { get; set; }
     }
 
+    /// <summary>Ingresos y gastos de un mes (grafica de barras dobles del inicio).</summary>
+    public class ComparacionMensual
+    {
+        public string Mes { get; set; } = string.Empty;
+        public decimal Ingresos { get; set; }
+        public decimal Gastos { get; set; }
+    }
+
+    /// <summary>Todo lo que dibuja el tablero de Inicio (indicadores y graficas).</summary>
+    public class DatosTablero
+    {
+        public ResumenEmprendimiento Resumen { get; set; } = new ResumenEmprendimiento();
+        public ResumenVentas Ventas { get; set; } = new ResumenVentas();
+        public List<ValorEtiquetado> VentasPorDia { get; set; } = new List<ValorEtiquetado>();
+        public List<ComparacionMensual> IngresosGastos { get; set; } = new List<ComparacionMensual>();
+        public List<ValorEtiquetado> GastosPorCategoria { get; set; } = new List<ValorEtiquetado>();
+        public List<ValorEtiquetado> TopProductos { get; set; } = new List<ValorEtiquetado>();
+        public List<ValorEtiquetado> EstadoInventario { get; set; } = new List<ValorEtiquetado>();
+        public List<ProductoStockBajo> StockBajo { get; set; } = new List<ProductoStockBajo>();
+        public List<Presupuesto> PresupuestosEnAlerta { get; set; } = new List<Presupuesto>();
+    }
+
     /// <summary>Producto con stock bajo (sp_sg_productos_stock_bajo).</summary>
     public class ProductoStockBajo
     {

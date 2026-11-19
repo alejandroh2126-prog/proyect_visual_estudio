@@ -233,6 +233,25 @@ namespace Presentacion.Comun
         public object ConvertBack(object value, Type t, object p, CultureInfo c) { throw new NotSupportedException(); }
     }
 
+    /// <summary>Visible si los dos valores son iguales (marca con un check el color elegido en Apariencia).</summary>
+    public class IgualesAVisibleConverter : IMultiValueConverter
+    {
+        public object Convert(object[] values, Type t, object p, CultureInfo c)
+        {
+            if (values.Length < 2) return Visibility.Collapsed;
+            string a = values[0]?.ToString() ?? string.Empty, b = values[1]?.ToString() ?? string.Empty;
+            return string.Equals(a, b, StringComparison.OrdinalIgnoreCase) ? Visibility.Visible : Visibility.Collapsed;
+        }
+        public object[] ConvertBack(object value, Type[] t, object p, CultureInfo c) { throw new NotSupportedException(); }
+    }
+
+    /// <summary>true -> oculto; false -> visible.</summary>
+    public class BoolAVisibleInvertidoConverter : IValueConverter
+    {
+        public object Convert(object value, Type t, object p, CultureInfo c) { return value is bool b && b ? Visibility.Collapsed : Visibility.Visible; }
+        public object ConvertBack(object value, Type t, object p, CultureInfo c) { throw new NotSupportedException(); }
+    }
+
     /// <summary>Muestra el control del formulario que corresponde al tipo de campo (parametro: "Texto,Numero").</summary>
     public class TipoCampoAVisibleConverter : IValueConverter
     {

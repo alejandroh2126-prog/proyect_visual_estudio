@@ -20,16 +20,44 @@ namespace Presentacion.ViewModels
         [ObservableProperty] private ResumenVentas? _ventas;
         [ObservableProperty] private bool _hayEmprendimiento;
 
+        // Graficas del tablero
+        [ObservableProperty] private List<PuntoGrafica> _ventasPorDia = new List<PuntoGrafica>();
+        [ObservableProperty] private List<PuntoGrafica> _ingresosGastos = new List<PuntoGrafica>();
+        [ObservableProperty] private List<PuntoGrafica> _gastosPorCategoria = new List<PuntoGrafica>();
+        [ObservableProperty] private List<PuntoGrafica> _topProductos = new List<PuntoGrafica>();
+        [ObservableProperty] private List<PuntoGrafica> _estadoInventario = new List<PuntoGrafica>();
+        [ObservableProperty] private string _totalGastos = string.Empty;
+        [ObservableProperty] private string _totalProductos = string.Empty;
+        [ObservableProperty] private string _ventasCatorceDias = string.Empty;
+
         public ObservableCollection<ProductoStockBajo> StockBajo { get; } = new ObservableCollection<ProductoStockBajo>();
         public ObservableCollection<Presupuesto> Alertas { get; } = new ObservableCollection<Presupuesto>();
         public ObservableCollection<ResumenEmprendimiento> Todos { get; } = new ObservableCollection<ResumenEmprendimiento>();
 
-        public string Saludo { get { return "Hola, " + (Sesion.Usuario?.Nombre ?? string.Empty); } }
+        public string Saludo { get { return "¡Hola, " + PrimerNombre(Sesion.Usuario?.Nombre) + "!"; } }
+
+        public string Fecha
+        {
+            get
+            {
+                string f = DateTime.Now.ToString("dddd, d 'de' MMMM 'de' yyyy", System.Globalization.CultureInfo.GetCultureInfo("es-CO"));
+                return char.ToUpper(f[0]) + f.Substring(1);
+            }
+        }
+
+        private static string PrimerNombre(string? nombre)
+        {
+            string n = (nombre ?? string.Empty).Trim();
+            int espacio = n.IndexOf(' ');
+            return espacio > 0 ? n.Substring(0, espacio) : n;
+        }
 
         public override async Task Cargar()
         {
             await Ejecutar(async () =>
             {
+                OnPropertyChanged(nameof(Saludo));
+                OnPropertyChanged(nameof(Fecha));
                 HayEmprendimiento = Sesion.HayEmprendimiento;
                 int usuario = Sesion.IdUsuario;
                 List<ResumenEmprendimiento> todos = await Fondo.Run(() => App.Servicios.Emprendimientos.Resumenes(usuario));
@@ -41,12 +69,64 @@ namespace Presentacion.ViewModels
                 if (!HayEmprendimiento) { Resumen = null; Ventas = null; return; }
 
                 int emp = Sesion.IdEmprendimiento;
-                Resumen = await Fondo.Run(() => App.Servicios.Reportes.Resumen(emp));
-                Ventas = await Fondo.Run(() => App.Servicios.Ventas.Resumen(emp));
-                foreach (ProductoStockBajo p in await Fondo.Run(() => App.Servicios.Inventario.StockBajo(emp))) StockBajo.Add(p);
-                foreach (Presupuesto p in await Fondo.Run(() => App.Servicios.Presupuestos.Listar(emp, Validar.MesActual())))
-                    if (p.Estado != Presupuesto.EstadoOk) Alertas.Add(p);
+                DatosTablero d = await Fondo.Run(() => App.Servicios.Reportes.Tablero(emp));
+                Resumen = d.Resumen;
+                Ventas = d.Ventas;
+                foreach (ProductoStockBajo p in d.StockBajo) StockBajo.Add(p);
+                foreach (Presupuesto p in d.PresupuestosEnAlerta) Alertas.Add(p);
+                Graficas(d);
             });
+        }
+
+        private void Graficas(DatosTablero d)
+        {
+            List<PuntoGrafica> dias = new List<PuntoGrafica>();
+            decimal catorce = 0m;
+            foreach (ValorEtiquetado v in d.VentasPorDia)
+            {
+                catorce += v.Valor;
+                dias.Add(new PuntoGrafica
+                {
+                    Etiqueta = v.Etiqueta,
+                    Valor = (double)v.Valor,
+                    Texto = Formato.Moneda(v.Valor),
+                    Texto2 = v.Cantidad == 1 ? "1 venta" : v.Cantidad + " ventas"
+                });
+            }
+            VentasPorDia = dias;
+            VentasCatorceDias = Formato.Moneda(catorce) + " en 14 días";
+
+            List<PuntoGrafica> meses = new List<PuntoGrafica>();
+            foreach (ComparacionMensual m in d.IngresosGastos)
+                meses.Add(new PuntoGrafica
+                {
+                    Etiqueta = m.Mes,
+                    Valor = (double)m.Ingresos,
+                    Valor2 = (double)m.Gastos,
+                    Texto = Formato.Moneda(m.Ingresos),
+                    Texto2 = Formato.Moneda(m.Gastos)
+                });
+            IngresosGastos = meses;
+
+            GastosPorCategoria = PaletaGraficas.Desde(d.GastosPorCategoria, true, true);
+            decimal gastos = 0m;
+            foreach (ValorEtiquetado v in d.GastosPorCategoria) gastos += v.Valor;
+            TotalGastos = PaletaGraficas.Compacto((double)gastos, true);
+
+            List<PuntoGrafica> top = PaletaGraficas.Desde(d.TopProductos, false, true);
+            foreach (PuntoGrafica p in top) p.Texto = p.Texto + " und.";
+            TopProductos = top;
+
+            List<PuntoGrafica> inventario = PaletaGraficas.Desde(d.EstadoInventario, false, false);
+            int productos = 0;
+            foreach (PuntoGrafica p in inventario)
+            {
+                p.Color = p.Etiqueta == "Agotado" ? PaletaGraficas.Rojo : p.Etiqueta == "Stock bajo" ? PaletaGraficas.Naranja : PaletaGraficas.Verde;
+                p.Texto = p.Texto + (p.Texto == "1" ? " producto" : " productos");
+                productos += (int)p.Valor;
+            }
+            EstadoInventario = inventario;
+            TotalProductos = productos.ToString();
         }
 
         [RelayCommand]

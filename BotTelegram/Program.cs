@@ -68,6 +68,15 @@ namespace BotTelegram
             try { await telegram.RegistrarComandos(cts.Token); }
             catch (Exception ex) { Console.Error.WriteLine("Aviso: no se registraron los comandos: " + ex.Message); }
 
+            // El nombre del bot queda en Oracle: la aplicacion arma el enlace "Abrir en Telegram" (vincular con un toque)
+            try
+            {
+                string usuarioBot = await telegram.UsuarioDelBot(cts.Token);
+                if (usuarioBot.Length > 0 && servicios.Configuracion.Leer(Logica.Servicios.ServicioConfiguracion.UsuarioBotTelegram) != usuarioBot)
+                    servicios.Configuracion.Guardar(Logica.Servicios.ServicioConfiguracion.UsuarioBotTelegram, usuarioBot);
+            }
+            catch (Exception ex) { Console.Error.WriteLine("Aviso: no se guardó el nombre del bot: " + ex.Message); }
+
             Console.WriteLine(DateTime.Now.ToString("s") + " Bot de SGAPE iniciado con el modelo " + groq.Modelo +
                               ". Alertas cada " + config.MinutosAlertas + " min; cierre del día a las " + config.HoraResumen + " h.");
             long siguiente = 0;

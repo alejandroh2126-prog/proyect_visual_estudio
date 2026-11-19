@@ -44,6 +44,66 @@ namespace BotTelegram
         private readonly ConcurrentDictionary<long, FlujoPostulacion> _flujos = new ConcurrentDictionary<long, FlujoPostulacion>();
         private readonly ConcurrentDictionary<long, Queue<DateTime>> _preguntas = new ConcurrentDictionary<long, Queue<DateTime>>();
 
+        // Chats a los que ya se les puso el menu de comandos correcto en esta ejecucion del bot
+        private readonly ConcurrentDictionary<long, bool> _menuListo = new ConcurrentDictionary<long, bool>();
+
+        // ---------------- Botones del teclado fijo ----------------
+        // Sin vincular (aspirantes o dueños que aun no vinculan): SOLO estas dos opciones
+        private const string BtnVincular = "🔗 Vincular mi cuenta";
+        private const string BtnVacantes = "💼 Ver vacantes";
+        // Vinculado: el menu completo
+        private const string BtnResumen = "📊 Resumen";
+        private const string BtnVentas = "🛒 Ventas de hoy";
+        private const string BtnStock = "📦 Stock bajo";
+        private const string BtnReporte = "📄 Reporte PDF";
+        private const string BtnPreguntas = "💡 Preguntas sugeridas";
+        private const string BtnMas = "☰ Más opciones";
+
+        private static readonly List<List<string>> MenuPublico = new List<List<string>>
+        {
+            new List<string> { BtnVincular },
+            new List<string> { BtnVacantes }
+        };
+
+        private static readonly List<List<string>> MenuVinculado = new List<List<string>>
+        {
+            new List<string> { BtnResumen, BtnVentas },
+            new List<string> { BtnStock, BtnReporte },
+            new List<string> { BtnPreguntas, BtnMas }
+        };
+
+        /// <summary>Preguntas que el dueño puede tocar en lugar de escribirlas (las responde el asistente con Groq).</summary>
+        private static readonly string[] PreguntasSugeridas =
+        {
+            "¿Cuánto vendí esta semana?",
+            "¿Cuánto he vendido este mes y cómo va frente al mes pasado?",
+            "¿Cuáles son mis 5 productos más vendidos?",
+            "¿Qué productos se están agotando?",
+            "¿En qué estoy gastando más este mes?",
+            "¿Cómo van los presupuestos de este mes?",
+            "¿Cuánto le debo devolver a los socios e inversionistas?",
+            "¿Cuánto pago de nómina al mes?",
+            "¿Qué vacantes tengo abiertas y cuántas hojas de vida llegaron?",
+            "Dame 3 consejos para vender más según mis datos"
+        };
+
+        /// <summary>El texto de un boton del teclado fijo equivale a un comando.</summary>
+        private static string ComandoDeBoton(string texto)
+        {
+            switch (texto)
+            {
+                case BtnVincular: return "/vincular";
+                case BtnVacantes: return "/vacantes";
+                case BtnResumen: return "/resumen";
+                case BtnVentas: return "/ventas";
+                case BtnStock: return "/stock";
+                case BtnReporte: return "/reporte";
+                case BtnPreguntas: return "/preguntas";
+                case BtnMas: return "/opciones";
+                default: return texto;
+            }
+        }
+
         public Manejador(TelegramApi tg, FabricaServicios servicios, Asistente asistente, Herramientas herramientas, int limitePreguntas)
         {
             _tg = tg;
@@ -122,6 +182,7 @@ namespace BotTelegram
 
         private async Task AlRecibirTexto(long chatId, string texto, CancellationToken ct)
         {
+            texto = ComandoDeBoton(texto);   // los botones del teclado fijo llegan como texto
             string comando = texto.StartsWith("/") ? texto.Split(' ', 2)[0].Split('@')[0].ToLowerInvariant() : string.Empty;
             string argumento = texto.Contains(' ') ? texto.Substring(texto.IndexOf(' ') + 1).Trim() : string.Empty;
 
@@ -143,14 +204,42 @@ namespace BotTelegram
             switch (comando)
             {
                 case "/start":
+                    // Enlaces de la aplicacion: t.me/bot?start=vincular_123456 (vincula con un toque) y ?start=vacantes
+                    if (argumento.StartsWith("vincular_", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await VincularCon(chatId, argumento.Substring("vincular_".Length), ct);
+                        return;
+                    }
+                    if (argumento.Equals("vacantes", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await Vacantes(chatId, ct);
+                        return;
+                    }
+                    await Bienvenida(chatId, ct);
+                    return;
+                case "/menu":
+                    await Bienvenida(chatId, ct);
+                    return;
                 case "/ayuda":
                     await Ayuda(chatId, ct);
                     return;
                 case "/vincular":
-                    VinculoTelegram v = _s.Telegram.Vincular(chatId, argumento);
-                    _asistente.Olvidar(chatId);
-                    await _tg.EnviarMensaje(chatId, "¡Hola, " + v.NombreUsuario + "! Tu cuenta quedó vinculada. Escribe /resumen o pregúntame lo que necesites.", null, ct);
-                    await Emprendimientos(chatId, ct);
+                    if (argumento.Length == 0)
+                    {
+                        // Toco el boton "Vincular mi cuenta": se le explica y basta con que envie el codigo
+                        if (_s.Telegram.UsuarioDeChat(chatId) != null)
+                        {
+                            await _tg.EnviarMensaje(chatId, "Este chat ya está vinculado. Escribe /menu para ver tus opciones.", null, ct);
+                            return;
+                        }
+                        await _tg.EnviarMensaje(chatId,
+                            "🔗 Vincular tu cuenta de SGAPE\n\n" +
+                            "1️⃣ En la aplicación entra a la sección Telegram y toca «Generar código».\n" +
+                            "2️⃣ Envíame aquí ese código de 6 números (por ejemplo 123456).\n\n" +
+                            "💡 Más rápido: en la aplicación toca «Abrir en Telegram» y quedas vinculado con un solo toque.", null, ct);
+                        return;
+                    }
+                    await VincularCon(chatId, argumento, ct);
                     return;
                 case "/vacantes":
                     await Vacantes(chatId, ct);
@@ -165,19 +254,29 @@ namespace BotTelegram
             ContextoChat? ctx = Contexto(chatId, comando != "/desvincular");
             if (ctx == null)
             {
-                await _tg.EnviarMensaje(chatId,
-                    "Este chat no está vinculado a una cuenta de SGAPE.\n\n" +
-                    "• Si eres el dueño: en la aplicación entra a Telegram > Generar código y escribe aquí /vincular 123456.\n" +
-                    "• Si buscas empleo: escribe /vacantes.", null, ct);
+                // Un chat sin vincular que envia solo el codigo de 6 numeros: se intenta vincular
+                if (comando.Length == 0 && EsCodigo(texto))
+                {
+                    await VincularCon(chatId, texto, ct);
+                    return;
+                }
+                await MenuSinVincular(chatId, "Este chat no está vinculado a una cuenta de SGAPE. Elige una opción del menú de abajo 👇", ct);
                 return;
             }
+            await AsegurarMenu(chatId, true, ct);
 
             switch (comando)
             {
                 case "/desvincular":
                     _s.Telegram.Desvincular(chatId);
                     _asistente.Olvidar(chatId);
-                    await _tg.EnviarMensaje(chatId, "Chat desvinculado. Para volver a usarlo genera un código nuevo en la aplicación.", null, ct);
+                    await MenuSinVincular(chatId, "Chat desvinculado. Para volver a usarlo genera un código nuevo en la aplicación.", ct);
+                    return;
+                case "/preguntas":
+                    await Sugerencias(ctx, ct);
+                    return;
+                case "/opciones":
+                    await MasOpciones(ctx, ct);
                     return;
                 case "/emprendimientos":
                     await Emprendimientos(chatId, ct);
@@ -271,19 +370,112 @@ namespace BotTelegram
         // COMANDOS DE CONSULTA (sin modelo de IA: van directo a Oracle)
         // =================================================================
 
+        // =================================================================
+        // MENUS: el chat sin vincular solo ve "Vincular" y "Vacantes"; el vinculado ve todo
+        // =================================================================
+
+        private static bool EsCodigo(string texto)
+        {
+            string t = texto.Trim();
+            if (t.Length != 6) return false;
+            foreach (char c in t) if (!char.IsDigit(c)) return false;
+            return true;
+        }
+
+        /// <summary>Pone el menu de comandos correcto para el chat (una vez por ejecucion; si falla, no importa).</summary>
+        private async Task AsegurarMenu(long chatId, bool vinculado, CancellationToken ct)
+        {
+            if (_menuListo.TryGetValue(chatId, out bool actual) && actual == vinculado) return;
+            try
+            {
+                await _tg.ComandosDeChat(chatId, vinculado, ct);
+                _menuListo[chatId] = vinculado;
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                Console.Error.WriteLine(DateTime.Now.ToString("s") + " Aviso: menú del chat " + chatId + ": " + ex.Message);
+            }
+        }
+
+        private async Task MenuSinVincular(long chatId, string texto, CancellationToken ct)
+        {
+            await AsegurarMenu(chatId, false, ct);
+            await _tg.EnviarMenu(chatId, texto, MenuPublico, ct);
+        }
+
+        /// <summary>/start y /menu: saludo y teclado segun el chat este o no vinculado.</summary>
+        private async Task Bienvenida(long chatId, CancellationToken ct)
+        {
+            int? usuario = _s.Telegram.UsuarioDeChat(chatId);
+            if (usuario == null)
+            {
+                await MenuSinVincular(chatId,
+                    "👋 ¡Hola! Soy el bot de SGAPE.\n\n" +
+                    "¿Qué quieres hacer?\n\n" +
+                    "🔗 Vincular mi cuenta: si tienes un emprendimiento en SGAPE, recibe aquí tus reportes, alertas y respuestas.\n\n" +
+                    "💼 Ver vacantes: si buscas empleo, mira las ofertas y envía tu hoja de vida sin instalar nada.", ct);
+                return;
+            }
+            ContextoChat? ctx = Contexto(chatId);
+            await AsegurarMenu(chatId, true, ct);
+            await _tg.EnviarMenu(chatId,
+                "👋 ¡Hola de nuevo! Trabajas con " + ctx?.Emprendimiento.Nombre + ".\n\n" +
+                "Usa los botones de abajo 👇 o pregúntame lo que necesites, por ejemplo:\n" +
+                "• ¿Cuánto vendí esta semana?\n" +
+                "• Registra un gasto de 50000 en transporte\n\n" +
+                "🔔 Te aviso solo del stock bajo, los presupuestos al 80 %, las hojas de vida nuevas y el cierre de cada día.", MenuVinculado, ct);
+        }
+
+        private async Task VincularCon(long chatId, string codigo, CancellationToken ct)
+        {
+            VinculoTelegram v = _s.Telegram.Vincular(chatId, codigo);
+            _asistente.Olvidar(chatId);
+            _flujos.TryRemove(chatId, out _);
+            await AsegurarMenu(chatId, true, ct);
+            await _tg.EnviarMenu(chatId,
+                "✅ ¡Listo, " + v.NombreUsuario + "! Tu cuenta quedó vinculada.\n\n" +
+                "Ahora tienes el menú completo 👇: resumen, ventas de hoy, stock, reporte en PDF y preguntas sugeridas. " +
+                "También puedes escribirme cualquier pregunta sobre tu negocio.", MenuVinculado, ct);
+            await Emprendimientos(chatId, ct);
+        }
+
+        /// <summary>Botones con preguntas listas: el dueño toca una y responde el asistente.</summary>
+        private async Task Sugerencias(ContextoChat ctx, CancellationToken ct)
+        {
+            List<List<Boton>> botones = new List<List<Boton>>();
+            for (int i = 0; i < PreguntasSugeridas.Length; i++)
+                botones.Add(new List<Boton> { new Boton(PreguntasSugeridas[i], "preg:" + i) });
+            await _tg.EnviarMensaje(ctx.ChatId, "💡 Toca una pregunta (o escribe la tuya):", botones, ct);
+        }
+
+        private async Task MasOpciones(ContextoChat ctx, CancellationToken ct)
+        {
+            List<List<Boton>> botones = new List<List<Boton>>
+            {
+                new List<Boton> { new Boton("💰 Presupuestos", "menu:presupuestos"), new Boton("👥 Nómina", "menu:nomina") },
+                new List<Boton> { new Boton("📄 Hojas de vida", "menu:postulaciones"), new Boton("🔔 Alertas on/off", "menu:alertas") },
+                new List<Boton> { new Boton("🏪 Cambiar de emprendimiento", "menu:emprendimientos") },
+                new List<Boton> { new Boton("❓ Ayuda", "menu:ayuda"), new Boton("🔓 Desvincular", "menu:desvincular") }
+            };
+            await _tg.EnviarMensaje(ctx.ChatId, "☰ Más opciones de " + ctx.Emprendimiento.Nombre + ":", botones, ct);
+        }
+
         private async Task Ayuda(long chatId, CancellationToken ct)
         {
             bool vinculado = _s.Telegram.UsuarioDeChat(chatId) != null;
             StringBuilder sb = new StringBuilder("Soy el bot de SGAPE.\n\n");
             if (vinculado)
             {
+                sb.AppendLine("Usa los botones de abajo o estos comandos:");
+                sb.AppendLine();
                 sb.AppendLine("/resumen - resumen del emprendimiento");
-                sb.AppendLine("/reporte - reporte completo en PDF");
+                sb.AppendLine("/ventas - ventas de hoy");
                 sb.AppendLine("/stock - productos con stock bajo");
+                sb.AppendLine("/reporte - reporte completo en PDF");
                 sb.AppendLine("/presupuestos - presupuestos del mes");
                 sb.AppendLine("/nomina - nómina del mes");
-                sb.AppendLine("/ventas - ventas de hoy");
                 sb.AppendLine("/postulaciones - hojas de vida por revisar");
+                sb.AppendLine("/preguntas - preguntas sugeridas");
                 sb.AppendLine("/alertas - activar o desactivar los avisos automáticos");
                 sb.AppendLine("/emprendimientos - cambiar de emprendimiento");
                 sb.AppendLine("/desvincular - desvincular este chat");
@@ -291,13 +483,17 @@ namespace BotTelegram
                 sb.AppendLine("También puedes preguntarme, por ejemplo: \"¿cuánto vendí esta semana?\" o \"registra un gasto de 50000 en transporte\".");
                 sb.AppendLine();
                 sb.Append("🔔 Sin que escribas nada te aviso del stock bajo, los presupuestos al 80 %, las hojas de vida nuevas y el cierre de cada día.");
+                await _tg.EnviarMenu(chatId, sb.ToString(), MenuVinculado, ct);
             }
             else
             {
-                sb.AppendLine("• Dueño de un emprendimiento: genera un código en la aplicación (sección Telegram) y escribe /vincular 123456.");
-                sb.AppendLine("• ¿Buscas empleo? Escribe /vacantes para ver las ofertas y enviar tu hoja de vida.");
+                sb.AppendLine("Tienes dos opciones:");
+                sb.AppendLine();
+                sb.AppendLine("🔗 Vincular mi cuenta: si eres dueño de un emprendimiento en SGAPE. Genera un código en la aplicación (sección Telegram) y envíamelo.");
+                sb.AppendLine();
+                sb.AppendLine("💼 Ver vacantes: si buscas empleo, mira las ofertas y envía tu hoja de vida.");
+                await MenuSinVincular(chatId, sb.ToString(), ct);
             }
-            await _tg.EnviarMensaje(chatId, sb.ToString(), null, ct);
         }
 
         private async Task Emprendimientos(long chatId, CancellationToken ct)
@@ -461,6 +657,20 @@ namespace BotTelegram
                     }
                     _s.Finanzas.Registrar(p.EmprendimientoId, p.EsIngreso, p.CategoriaId, p.Descripcion, p.Monto, DateTime.Today);
                     await _tg.EnviarMensaje(chatId, "✅ " + (p.EsIngreso ? "Ingreso" : "Gasto") + " registrado: " + p.Categoria + " " + Formato.Moneda(p.Monto) + ".", null, ct);
+                    return;
+
+                case "preg":
+                    // Pregunta sugerida: se muestra como si la hubiera escrito y la responde el asistente
+                    if (!int.TryParse(valor, out int i) || i < 0 || i >= PreguntasSugeridas.Length) return;
+                    ContextoChat? cp = Contexto(chatId);
+                    if (cp == null) { await Bienvenida(chatId, ct); return; }
+                    await _tg.EnviarMensaje(chatId, "❓ " + PreguntasSugeridas[i], null, ct);
+                    await Preguntar(cp, PreguntasSugeridas[i], ct);
+                    return;
+
+                case "menu":
+                    // Botones de "Más opciones": equivalen al comando
+                    if (valor.Length > 0 && valor.Length < 30) await AlRecibirTexto(chatId, "/" + valor, ct);
                     return;
 
                 case "vac":

@@ -18,6 +18,7 @@ namespace Presentacion
         {
             base.OnStartup(e);
             DispatcherUnhandledException += ErrorNoControlado;
+            Apariencia.Cargar();   // colores y tamaño que el usuario eligio (seccion Apariencia)
 
             VentanaCarga carga = new VentanaCarga();
             carga.Show();
