@@ -63,6 +63,14 @@ namespace Entidades
         /// <summary>Las de sistema (Ventas, Inventario) solo las usa el programa automaticamente.</summary>
         public bool Sistema { get; set; }
 
+        /// <summary>Ingresos que se le devuelven (en parte o con ganancia) a un socio, inversionista o prestamista.</summary>
+        public static readonly string[] ConDevolucion = { "Aportes de socios", "Inversión", "Préstamos recibidos" };
+
+        /// <summary>Gasto de sistema con el que se registra la devolucion.</summary>
+        public const string DevolucionSocios = "Devolución a socios";
+
+        public bool PermiteDevolucion { get { return Tipo == TipoIngreso && System.Array.IndexOf(ConDevolucion, Nombre) >= 0; } }
+
         public override string ToString() { return Nombre; }
     }
 }

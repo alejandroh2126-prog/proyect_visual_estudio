@@ -49,7 +49,7 @@ namespace Logica
             Nomina = new ServicioNomina(cargos, fabricaDao.CrearTrabajadorDao(), _reportes, Catalogos);
             Inventario = new ServicioInventario(productos);
             Ventas = new ServicioVentas(fabricaDao.CrearVentaDao(), productos, _reportes);
-            Finanzas = new ServicioFinanzas(fabricaDao.CrearMovimientoDao(), _reportes, Catalogos);
+            Finanzas = new ServicioFinanzas(fabricaDao.CrearMovimientoDao(), fabricaDao.CrearObligacionSocioDao(), _reportes, Catalogos);
             Presupuestos = new ServicioPresupuestos(fabricaDao.CrearPresupuestoDao(), Catalogos);
             Vacantes = new ServicioVacantes(fabricaDao.CrearVacanteDao(), fabricaDao.CrearPostulacionDao(), cargos, Catalogos);
             Reportes = new ServicioReportes(_reportes, Ventas, Inventario, Presupuestos, Planes);

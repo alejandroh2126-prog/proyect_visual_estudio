@@ -441,14 +441,23 @@ namespace Presentacion.ViewModels
     // =====================================================================
     public partial class FinanzasViewModel : ViewModelBase
     {
+        private const string DevolucionPendiente = "Queda pendiente por pagar";
+        private const string DevolucionInmediata = "Registrarla ya como gasto";
+
         private readonly List<Movimiento> _todos = new List<Movimiento>();
 
         public ObservableCollection<Movimiento> Movimientos { get; } = new ObservableCollection<Movimiento>();
         public string[] Filtros { get; } = { "Todos", "Ingresos", "Gastos" };
 
+        /// <summary>Lo que se le debe devolver a socios e inversionistas (pestaña "Por devolver").</summary>
+        public ObservableCollection<ObligacionSocio> Obligaciones { get; } = new ObservableCollection<ObligacionSocio>();
+
         [ObservableProperty] private ResumenFinanciero? _resumen;
         [ObservableProperty] private Movimiento? _seleccionado;
         [ObservableProperty] private string _filtro = "Todos";
+        [ObservableProperty] private ObligacionSocio? _obligacionSeleccionada;
+        [ObservableProperty] private decimal _totalPorDevolver;
+        [ObservableProperty] private int _pendientesPorDevolver;
 
         /// <summary>
         /// Presupuestos vive DENTRO de Finanzas (pestaña): los movimientos son lo que ya pasó y el presupuesto
@@ -466,8 +475,26 @@ namespace Presentacion.ViewModels
                 _todos.Clear();
                 _todos.AddRange(lista);
                 Filtrar();
+                await CargarObligaciones(emp);
             });
             await Presupuestos.Cargar();
+        }
+
+        private async Task CargarObligaciones(int emp)
+        {
+            List<ObligacionSocio> lista;
+            try { lista = await Fondo.Run(() => App.Servicios.Finanzas.Obligaciones(emp)); }
+            catch (ReglaDeNegocioException) { lista = new List<ObligacionSocio>(); }   // falta sql/sgape_v2_aportes.sql: Finanzas sigue funcionando
+            Obligaciones.Clear();
+            decimal total = 0;
+            int pendientes = 0;
+            foreach (ObligacionSocio o in lista)
+            {
+                Obligaciones.Add(o);
+                if (o.EsPendiente) { total += o.Monto; pendientes++; }
+            }
+            TotalPorDevolver = total;
+            PendientesPorDevolver = pendientes;
         }
 
         partial void OnFiltroChanged(string value) { Filtrar(); }
@@ -491,23 +518,76 @@ namespace Presentacion.ViewModels
             int emp = Sesion.IdEmprendimiento;
             List<CategoriaMovimiento> categorias = App.Servicios.Catalogos.CategoriasManuales(
                 ingreso ? CategoriaMovimiento.TipoIngreso : CategoriaMovimiento.TipoGasto);
+            string mensaje = ingreso ? "Ingreso registrado." : "Gasto registrado.";
+
+            // Campos de la devolucion: solo aparecen con Aportes de socios, Inversión o Préstamos recibidos
+            Action recalcular = () => { };
+            CampoFormulario monto = new CampoFormulario("monto", "Monto", TipoCampo.Moneda) { MaxLongitud = 15, AlEscribir = _ => recalcular() };
+            CampoFormulario socio = new CampoFormulario("socio", "Socio o inversionista", TipoCampo.Texto)
+                { Requerido = false, MaxLongitud = 100, Visible = false, Ayuda = "A quién hay que devolverle." };
+            CampoFormulario porcentaje = new CampoFormulario("porcentaje", "% a devolver", TipoCampo.Decimal)
+                { Requerido = false, MaxLongitud = 6, Visible = false, AlEscribir = _ => recalcular() };
+            CampoFormulario modo = new CampoFormulario("modo", "La devolución", TipoCampo.Lista)
+                { Requerido = false, Visible = false, Opciones = new[] { DevolucionPendiente, DevolucionInmediata }, Seleccion = DevolucionPendiente,
+                  Ayuda = "Pendiente: aparece en la pestaña \"Por devolver\" hasta que la pagues." };
+
+            recalcular = () =>
+            {
+                if (!porcentaje.Visible) return;
+                decimal p = porcentaje.ValorDecimal;
+                decimal valor = monto.ValorMoneda;
+                porcentaje.Ayuda = p > 0 && valor > 0
+                    ? "Se devolverán " + Formato.Moneda(ServicioFinanzas.MontoDevolucion(valor, p)) + (p > 100 ? " (el aporte más " + (p - 100).ToString("0.##", CultureInfo.CurrentCulture) + " %)." : ".")
+                    : "Ej.: 30 devuelve el 30 % del aporte; 110, el aporte más un 10 %. Vacío: no se devuelve nada.";
+            };
 
             FormularioViewModel f = new FormularioViewModel(ingreso ? "Nuevo ingreso" : "Nuevo gasto", async form =>
             {
-                int categoria = form["categoria"].Elegido<CategoriaMovimiento>()?.Id ?? 0;
+                CategoriaMovimiento? cat = form["categoria"].Elegido<CategoriaMovimiento>();
+                int categoria = cat?.Id ?? 0;
                 string descripcion = form["descripcion"].ValorTexto;
-                decimal monto = form["monto"].ValorMoneda;
+                decimal valor = monto.ValorMoneda;
                 DateTime fecha = form["fecha"].Fecha ?? DateTime.Today;
-                await Fondo.Run(() => App.Servicios.Finanzas.Registrar(emp, ingreso, categoria, descripcion, monto, fecha));
+                decimal p = porcentaje.ValorDecimal;
+
+                if (ingreso && cat != null && cat.PermiteDevolucion && p > 0)
+                {
+                    bool inmediata = (modo.Seleccion as string) == DevolucionInmediata;
+                    string nombre = socio.ValorTexto;
+                    await Fondo.Run(() => App.Servicios.Finanzas.RegistrarAporte(emp, categoria, descripcion, valor, fecha, nombre, p, inmediata));
+                    string devolver = Formato.Moneda(ServicioFinanzas.MontoDevolucion(valor, p));
+                    mensaje = inmediata
+                        ? "Ingreso registrado y devolución de " + devolver + " a " + nombre + " registrada como gasto."
+                        : "Ingreso registrado. Devolución de " + devolver + " a " + nombre + " pendiente en \"Por devolver\".";
+                }
+                else
+                {
+                    await Fondo.Run(() => App.Servicios.Finanzas.Registrar(emp, ingreso, categoria, descripcion, valor, fecha));
+                }
             });
-            f.Agregar(new CampoFormulario("categoria", "Categoría", TipoCampo.Lista) { Opciones = categorias });
-            f.Agregar(new CampoFormulario("monto", "Monto", TipoCampo.Moneda) { MaxLongitud = 15 });
+            f.Agregar(new CampoFormulario("categoria", "Categoría", TipoCampo.Lista)
+            {
+                Opciones = categorias,
+                AlSeleccionar = elegido =>
+                {
+                    bool devolucion = ingreso && (elegido as CategoriaMovimiento)?.PermiteDevolucion == true;
+                    socio.Visible = porcentaje.Visible = modo.Visible = devolucion;
+                    recalcular();
+                }
+            });
+            f.Agregar(monto);
             f.Agregar(new CampoFormulario("fecha", "Fecha", TipoCampo.Fecha) { Fecha = DateTime.Today, Ayuda = "No puede ser futura." });
             f.Agregar(new CampoFormulario("descripcion", "Descripción", TipoCampo.Texto) { Requerido = false, MaxLongitud = 300 });
+            if (ingreso)
+            {
+                f.Agregar(socio);
+                f.Agregar(porcentaje);
+                f.Agregar(modo);
+            }
 
             if (await Notificador.Formulario(f))
             {
-                Notificador.Exito(ingreso ? "Ingreso registrado." : "Gasto registrado.");
+                Notificador.Exito(mensaje);
                 await Cargar();
             }
         }
@@ -517,11 +597,49 @@ namespace Presentacion.ViewModels
         {
             if (Seleccionado == null) { Notificador.Error("Selecciona un movimiento."); return; }
             Movimiento m = Seleccionado;
-            if (!m.EsManual) { Notificador.Error("Este movimiento lo creó una venta o el inventario; no se elimina a mano."); return; }
-            if (!await Notificador.Confirmar("Eliminar movimiento", "¿Eliminar " + m.Categoria + " por " + Formato.Moneda(m.Monto) + "?", "Eliminar")) return;
+            if (!m.EsManual)
+            {
+                Notificador.Error(m.Referencia.StartsWith("DEVOLUCION-", StringComparison.Ordinal)
+                    ? "Esta es la devolución de un aporte; se maneja desde la pestaña \"Por devolver\"."
+                    : "Este movimiento lo creó una venta o el inventario; no se elimina a mano.");
+                return;
+            }
+            ObligacionSocio? o = null;
+            foreach (ObligacionSocio x in Obligaciones) if (x.MovimientoId == m.Id) o = x;
+            string extra = o != null && o.EsPendiente ? " También se borra la devolución pendiente a " + o.Beneficiario + "." : string.Empty;
+            if (!await Notificador.Confirmar("Eliminar movimiento", "¿Eliminar " + m.Categoria + " por " + Formato.Moneda(m.Monto) + "?" + extra, "Eliminar")) return;
             int emp = Sesion.IdEmprendimiento;
             await Ejecutar(() => Fondo.Run(() => App.Servicios.Finanzas.Eliminar(emp, m.Id)));
             await Cargar();
+        }
+
+        /// <summary>Pagar una devolucion pendiente: se registra como gasto "Devolución a socios".</summary>
+        [RelayCommand]
+        private async Task PagarDevolucion()
+        {
+            if (ObligacionSeleccionada == null) { Notificador.Error("Selecciona una devolución."); return; }
+            ObligacionSocio o = ObligacionSeleccionada;
+            if (!o.EsPendiente) { Notificador.Error("Esa devolución ya está pagada."); return; }
+            int emp = Sesion.IdEmprendimiento;
+
+            FormularioViewModel f = new FormularioViewModel("Pagar devolución a " + o.Beneficiario, async form =>
+            {
+                DateTime fecha = form["fecha"].Fecha ?? DateTime.Today;
+                await Fondo.Run(() => App.Servicios.Finanzas.PagarObligacion(emp, o.Id, fecha));
+            })
+            { TextoBoton = "Registrar como gasto" };
+            f.Agregar(new CampoFormulario("fecha", "Fecha del pago", TipoCampo.Fecha)
+            {
+                Fecha = DateTime.Today,
+                Ayuda = "Se registrará un gasto de " + Formato.Moneda(o.Monto) + " (" + o.Porcentaje.ToString("0.##", CultureInfo.CurrentCulture) +
+                        " % de " + Formato.Moneda(o.MontoAporte) + ")."
+            });
+
+            if (await Notificador.Formulario(f))
+            {
+                Notificador.Exito("Devolución a " + o.Beneficiario + " registrada como gasto.");
+                await Cargar();
+            }
         }
     }
 

@@ -246,12 +246,14 @@ namespace Logica.Servicios
     public class ServicioFinanzas
     {
         private readonly IMovimientoDao _movimientos;
+        private readonly IObligacionSocioDao _obligaciones;
         private readonly IReporteDao _reportes;
         private readonly ServicioCatalogos _catalogos;
 
-        public ServicioFinanzas(IMovimientoDao movimientos, IReporteDao reportes, ServicioCatalogos catalogos)
+        public ServicioFinanzas(IMovimientoDao movimientos, IObligacionSocioDao obligaciones, IReporteDao reportes, ServicioCatalogos catalogos)
         {
             _movimientos = movimientos;
+            _obligaciones = obligaciones;
             _reportes = reportes;
             _catalogos = catalogos;
         }
@@ -260,6 +262,44 @@ namespace Logica.Servicios
         public ResumenFinanciero Resumen(int emprendimientoId) { return _reportes.Finanzas(emprendimientoId); }
 
         public Movimiento Registrar(int emprendimientoId, bool esIngreso, int categoriaId, string? descripcion, decimal monto, DateTime fecha)
+        {
+            Movimiento m = Preparar(emprendimientoId, esIngreso, categoriaId, descripcion, monto, fecha);
+            return _movimientos.Insertar(m);
+        }
+
+        /// <summary>
+        /// Aporte de socio, inversion o prestamo con el porcentaje que hay que devolver.
+        /// La devolucion queda pendiente o, si gastoInmediato, se registra ya como gasto "Devolución a socios".
+        /// Todo ocurre en una sola transaccion de Oracle (sp_sg_registrar_aporte).
+        /// </summary>
+        public Movimiento RegistrarAporte(int emprendimientoId, int categoriaId, string? descripcion, decimal monto, DateTime fecha,
+                                          string? beneficiario, decimal porcentaje, bool gastoInmediato)
+        {
+            Movimiento m = Preparar(emprendimientoId, true, categoriaId, descripcion, monto, fecha);
+            CategoriaMovimiento cat = _catalogos.Categorias().Find(c => c.Id == categoriaId)!;
+            if (!cat.PermiteDevolucion)
+                throw new ReglaDeNegocioException("El porcentaje a devolver solo aplica a aportes de socios, inversiones y préstamos.");
+            string socio = Validar.Requerido(beneficiario, "Socio o inversionista", 100);
+            if (porcentaje <= 0 || porcentaje > 500)
+                throw new ReglaDeNegocioException("El porcentaje a devolver debe ser mayor que 0 y máximo 500.");
+            if (Math.Round(m.Monto * porcentaje / 100m, 2) <= 0)
+                throw new ReglaDeNegocioException("Con ese porcentaje la devolución queda en $0. Revisa el monto o el porcentaje.");
+
+            m.Id = _obligaciones.RegistrarAporte(m, socio, Math.Round(porcentaje, 2), gastoInmediato);
+            return m;
+        }
+
+        public static decimal MontoDevolucion(decimal monto, decimal porcentaje) { return Math.Round(monto * porcentaje / 100m, 2); }
+
+        public List<ObligacionSocio> Obligaciones(int emprendimientoId) { return _obligaciones.ListarPorEmprendimiento(emprendimientoId); }
+
+        public void PagarObligacion(int emprendimientoId, int obligacionId, DateTime fecha)
+        {
+            Validar.FechaNoFutura(fecha, "Fecha de pago");
+            _obligaciones.Pagar(emprendimientoId, obligacionId, fecha.Date == DateTime.Today ? DateTime.Now : fecha.Date.AddHours(12));
+        }
+
+        private Movimiento Preparar(int emprendimientoId, bool esIngreso, int categoriaId, string? descripcion, decimal monto, DateTime fecha)
         {
             Validar.Seleccionado(categoriaId, "Categoría");
             Validar.MayorQueCero(monto, "Monto");
@@ -272,7 +312,7 @@ namespace Logica.Servicios
             if (cat == null)
                 throw new ReglaDeNegocioException("Elige una categoría de " + (esIngreso ? "ingreso" : "gasto") + " de la lista.");
 
-            Movimiento m = new Movimiento
+            return new Movimiento
             {
                 EmprendimientoId = emprendimientoId,
                 Tipo = esIngreso ? TipoMovimiento.Ingreso : TipoMovimiento.Gasto,
@@ -282,7 +322,6 @@ namespace Logica.Servicios
                 Monto = Math.Round(monto, 2),
                 Fecha = fecha.Date == DateTime.Today ? DateTime.Now : fecha.Date.AddHours(12)
             };
-            return _movimientos.Insertar(m);
         }
 
         public void Eliminar(int emprendimientoId, int movimientoId)
@@ -290,8 +329,14 @@ namespace Logica.Servicios
             Movimiento? m = _movimientos.ObtenerPorId(movimientoId);
             ServicioNomina.Propio(m?.EmprendimientoId, emprendimientoId, "Movimiento");
             if (!m!.EsManual)
-                throw new ReglaDeNegocioException("Este movimiento lo creó una venta o el inventario; no se elimina a mano.");
-            _movimientos.Eliminar(movimientoId);
+                throw new ReglaDeNegocioException(m.Referencia.StartsWith("DEVOLUCION-", StringComparison.Ordinal)
+                    ? "Esta es la devolución de un aporte; se maneja desde la pestaña \"Por devolver\"."
+                    : "Este movimiento lo creó una venta o el inventario; no se elimina a mano.");
+            // Un aporte cuya devolucion ya se pago no se borra: el gasto de la devolucion quedaria sin su ingreso
+            ObligacionSocio? o = m.EsIngreso ? _obligaciones.PorMovimiento(movimientoId) : null;
+            if (o != null && !o.EsPendiente)
+                throw new ReglaDeNegocioException("La devolución de este aporte ya se pagó a " + o.Beneficiario + "; no se puede eliminar el aporte.");
+            _movimientos.Eliminar(movimientoId);   // si la devolucion estaba pendiente, se borra con el aporte (ON DELETE CASCADE)
         }
     }
 

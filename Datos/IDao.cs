@@ -102,6 +102,19 @@ namespace Datos
         bool Eliminar(int id);
     }
 
+    /// <summary>Devoluciones a socios e inversionistas (sg_obligacion_socio).</summary>
+    public interface IObligacionSocioDao
+    {
+        List<ObligacionSocio> ListarPorEmprendimiento(int emprendimientoId);
+        ObligacionSocio? PorMovimiento(int movimientoId);
+
+        /// <summary>sp_sg_registrar_aporte: el ingreso y su devolucion en una sola transaccion. Devuelve el id del ingreso.</summary>
+        int RegistrarAporte(Movimiento ingreso, string beneficiario, decimal porcentaje, bool gastoInmediato);
+
+        /// <summary>sp_sg_pagar_obligacion: registra la devolucion como gasto.</summary>
+        void Pagar(int emprendimientoId, int obligacionId, DateTime fecha);
+    }
+
     public interface IPresupuestoDao
     {
         /// <summary>sp_sg_presupuestos_estado: presupuestos del mes con gastado, porcentaje y estado.</summary>

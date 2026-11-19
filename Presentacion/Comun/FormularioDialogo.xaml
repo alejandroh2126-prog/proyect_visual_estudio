@@ -73,7 +73,8 @@
             <ItemsControl ItemsSource="{Binding Campos}" IsTabStop="False">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type c:CampoFormulario}">
-                        <StackPanel Margin="0,0,0,16" IsEnabled="{Binding Habilitado}">
+                        <StackPanel Margin="0,0,0,16" IsEnabled="{Binding Habilitado}"
+                                    Visibility="{Binding Visible, Converter={StaticResource BoolAVisible}}">
                             <!-- Solo se crea el control del tipo de campo (asi no hay dos controles enlazados al mismo valor) -->
                             <ContentControl Content="{Binding}" IsTabStop="False" Focusable="False">
                                 <ContentControl.Style>

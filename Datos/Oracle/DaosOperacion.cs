@@ -262,6 +262,83 @@ namespace Datos.Oracle
         }
     }
 
+    public class ObligacionSocioDaoOracle : IObligacionSocioDao
+    {
+        private const string Sql =
+            "SELECT id, emprendimiento_id, movimiento_id, fecha_aporte, categoria, beneficiario, monto_aporte, porcentaje, " +
+            "monto, estado, fecha_pago FROM vw_sg_obligaciones_socio";
+
+        private static ObligacionSocio Mapear(OracleDataReader r)
+        {
+            return new ObligacionSocio
+            {
+                Id = Int(r, "id"),
+                EmprendimientoId = Int(r, "emprendimiento_id"),
+                MovimientoId = Int(r, "movimiento_id"),
+                FechaAporte = Fec(r, "fecha_aporte"),
+                Categoria = Txt(r, "categoria"),
+                Beneficiario = Txt(r, "beneficiario"),
+                MontoAporte = Dec(r, "monto_aporte"),
+                Porcentaje = Dec(r, "porcentaje"),
+                Monto = Dec(r, "monto"),
+                Estado = Txt(r, "estado"),
+                FechaPago = FecNula(r, "fecha_pago")
+            };
+        }
+
+        public List<ObligacionSocio> ListarPorEmprendimiento(int emprendimientoId)
+        {
+            // Primero las pendientes; dentro de cada grupo, las mas recientes
+            return Lista(Sql + " WHERE emprendimiento_id = :p_emp " +
+                         "ORDER BY CASE estado WHEN 'pendiente' THEN 0 ELSE 1 END, fecha_aporte DESC, id DESC",
+                         Mapear, c => Entero(c, "emp", emprendimientoId));
+        }
+
+        public ObligacionSocio? PorMovimiento(int movimientoId)
+        {
+            return Uno(Sql + " WHERE movimiento_id = :p_mov", Mapear, c => Entero(c, "mov", movimientoId));
+        }
+
+        public int RegistrarAporte(Movimiento ingreso, string beneficiario, decimal porcentaje, bool gastoInmediato)
+        {
+            return Ejecutar(con =>
+            {
+                using (OracleCommand cmd = Comando(con,
+                    "BEGIN sp_sg_registrar_aporte(:p_emp, :p_categoria, :p_descripcion, :p_monto, :p_fecha, " +
+                    ":p_beneficiario, :p_porcentaje, :p_inmediato, :p_movimiento, :p_obligacion); END;"))
+                {
+                    Entero(cmd, "emp", ingreso.EmprendimientoId);
+                    Entero(cmd, "categoria", ingreso.CategoriaId);
+                    Texto(cmd, "descripcion", ingreso.Descripcion);
+                    Numero(cmd, "monto", ingreso.Monto);
+                    Fecha(cmd, "fecha", ingreso.Fecha);
+                    Texto(cmd, "beneficiario", beneficiario);
+                    Numero(cmd, "porcentaje", porcentaje);
+                    Texto(cmd, "inmediato", gastoInmediato ? "S" : "N");
+                    OracleParameter movimiento = Param(cmd, "movimiento", OracleDbType.Int32, null, ParameterDirection.Output);
+                    Param(cmd, "obligacion", OracleDbType.Int32, null, ParameterDirection.Output);
+                    cmd.ExecuteNonQuery();
+                    return SalidaEntero(movimiento);
+                }
+            });
+        }
+
+        public void Pagar(int emprendimientoId, int obligacionId, DateTime fecha)
+        {
+            Ejecutar(con =>
+            {
+                using (OracleCommand cmd = Comando(con, "BEGIN sp_sg_pagar_obligacion(:p_emp, :p_obligacion, :p_fecha, :p_movimiento); END;"))
+                {
+                    Entero(cmd, "emp", emprendimientoId);
+                    Entero(cmd, "obligacion", obligacionId);
+                    Fecha(cmd, "fecha", fecha);
+                    Param(cmd, "movimiento", OracleDbType.Int32, null, ParameterDirection.Output);
+                    cmd.ExecuteNonQuery();
+                }
+            });
+        }
+    }
+
     public class PresupuestoDaoOracle : IPresupuestoDao
     {
         private static Presupuesto Mapear(OracleDataReader r, int emprendimientoId)

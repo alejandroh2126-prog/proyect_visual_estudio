@@ -50,8 +50,14 @@ namespace Presentacion.Comun
         [ObservableProperty] private string? _error;
         [ObservableProperty] private bool _habilitado = true;
 
+        /// <summary>Campos que solo aparecen segun otra eleccion (por ejemplo el % a devolver de un aporte). Oculto no se valida.</summary>
+        [ObservableProperty] private bool _visible = true;
+
         /// <summary>Se ejecuta cuando cambia la seleccion (por ejemplo: elegir un cargo sugerido llena el salario).</summary>
         public Action<object?>? AlSeleccionar { get; init; }
+
+        /// <summary>Se ejecuta cuando cambia el texto (por ejemplo: recalcular cuanto se devuelve).</summary>
+        public Action<string>? AlEscribir { get; init; }
 
         public CampoFormulario(string clave, string etiqueta, TipoCampo tipo)
         {
@@ -70,7 +76,7 @@ namespace Presentacion.Comun
             AlSeleccionar?.Invoke(value);
         }
 
-        partial void OnTextoChanged(string value) { Error = null; }
+        partial void OnTextoChanged(string value) { Error = null; AlEscribir?.Invoke(value); }
         partial void OnFechaChanged(DateTime? value) { Error = null; }
 
         // ---------- Lectura de valores ----------
@@ -108,6 +114,7 @@ namespace Presentacion.Comun
         public bool Validar()
         {
             Error = null;
+            if (!Visible) return true;
             switch (Tipo)
             {
                 case TipoCampo.Fecha:

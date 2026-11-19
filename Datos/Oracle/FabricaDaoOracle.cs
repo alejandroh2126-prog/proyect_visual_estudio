@@ -18,6 +18,7 @@ namespace Datos.Oracle
         public override IProductoDao CrearProductoDao() { return new ProductoDaoOracle(); }
         public override IVentaDao CrearVentaDao() { return new VentaDaoOracle(); }
         public override IMovimientoDao CrearMovimientoDao() { return new MovimientoDaoOracle(); }
+        public override IObligacionSocioDao CrearObligacionSocioDao() { return new ObligacionSocioDaoOracle(); }
         public override IPresupuestoDao CrearPresupuestoDao() { return new PresupuestoDaoOracle(); }
         public override IVacanteDao CrearVacanteDao() { return new VacanteDaoOracle(); }
         public override IPostulacionDao CrearPostulacionDao() { return new PostulacionDaoOracle(); }

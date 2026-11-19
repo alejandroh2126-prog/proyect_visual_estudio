@@ -6,7 +6,7 @@
         <TextBlock DockPanel.Dock="Top" Text="Finanzas" Style="{StaticResource TituloSeccion}" />
 
         <!-- pkg_sg_reportes.total_ingresos / total_gastos / utilidad -->
-        <UniformGrid DockPanel.Dock="Top" Columns="3">
+        <UniformGrid DockPanel.Dock="Top" Columns="4">
             <md:Card Style="{StaticResource Tarjeta}">
                 <StackPanel><TextBlock Text="Ingresos" Style="{StaticResource EtiquetaKpi}" />
                     <TextBlock Text="{Binding Resumen.TotalIngresos, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" Foreground="#2E7D32" /></StackPanel>
@@ -19,6 +19,11 @@
                 <StackPanel><TextBlock Text="Balance" Style="{StaticResource EtiquetaKpi}" />
                     <TextBlock Text="{Binding Resumen.Balance, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}"
                                Foreground="{Binding Resumen.Balance, Converter={StaticResource EstadoAColor}}" /></StackPanel>
+            </md:Card>
+            <!-- sg_obligacion_socio: lo que falta devolver a socios e inversionistas -->
+            <md:Card Style="{StaticResource Tarjeta}">
+                <StackPanel><TextBlock Text="Por devolver a socios" Style="{StaticResource EtiquetaKpi}" />
+                    <TextBlock Text="{Binding TotalPorDevolver, Converter={StaticResource Moneda}}" Style="{StaticResource ValorKpi}" Foreground="#E65100" /></StackPanel>
             </md:Card>
         </UniformGrid>
 
@@ -54,6 +59,54 @@
                         </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
+                </DockPanel>
+            </TabItem>
+            <!-- Aportes de socios, inversiones y prestamos con porcentaje a devolver -->
+            <TabItem Header="Por devolver">
+                <DockPanel>
+                    <DockPanel DockPanel.Dock="Top" Margin="0,12,0,12" LastChildFill="False">
+                        <Button DockPanel.Dock="Left" Style="{StaticResource BotonPrincipal}" Command="{Binding PagarDevolucionCommand}">
+                            <StackPanel Orientation="Horizontal"><md:PackIcon Kind="CheckCircleOutline" /><TextBlock Text="Marcar como pagada" Margin="6,0,0,0" /></StackPanel>
+                        </Button>
+                        <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" Margin="12,0,0,0" Opacity="0.75" TextWrapping="Wrap" MaxWidth="560"
+                                   Text="Al registrar un ingreso de Aportes de socios, Inversión o Préstamos recibidos, escribe abajo el % a devolver. Al pagarla se registra como gasto &quot;Devolución a socios&quot;." />
+                    </DockPanel>
+
+                    <DataGrid ItemsSource="{Binding Obligaciones}" SelectedItem="{Binding ObligacionSeleccionada}" Style="{StaticResource Tabla}">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Fecha del aporte" Binding="{Binding FechaAporte, Converter={StaticResource Fecha}}" />
+                            <DataGridTextColumn Header="Socio o inversionista" Binding="{Binding Beneficiario}" Width="*" />
+                            <DataGridTextColumn Header="Tipo" Binding="{Binding Categoria}" />
+                            <DataGridTextColumn Header="Aporte" Binding="{Binding MontoAporte, Converter={StaticResource Moneda}}" />
+                            <DataGridTextColumn Header="%" Binding="{Binding Porcentaje, StringFormat='{0:0.##} %'}" />
+                            <DataGridTemplateColumn Header="A devolver">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Monto, Converter={StaticResource Moneda}}" FontWeight="SemiBold" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Estado">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding EstadoTexto}" FontWeight="SemiBold">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Setter Property="Foreground" Value="#2E7D32" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding EsPendiente}" Value="True">
+                                                            <Setter Property="Foreground" Value="#E65100" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTextColumn Header="Pagada el" Binding="{Binding FechaPago, Converter={StaticResource Fecha}}" />
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </DockPanel>
             </TabItem>
             <!-- Presupuestos: el limite mensual por categoria de gasto (sp_sg_presupuestos_estado) -->

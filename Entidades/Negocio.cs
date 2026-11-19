@@ -288,6 +288,31 @@ namespace Entidades
     }
 
     /// <summary>
+    /// Lo que hay que devolverle a un socio o inversionista por un aporte: un porcentaje del ingreso.
+    /// Queda pendiente hasta que se paga; al pagarla se registra un gasto "Devolución a socios".
+    /// </summary>
+    public class ObligacionSocio
+    {
+        public const string EstadoPendiente = "pendiente";
+        public const string EstadoPagada = "pagada";
+
+        public int Id { get; set; }
+        public int EmprendimientoId { get; set; }
+        public int MovimientoId { get; set; }
+        public DateTime FechaAporte { get; set; }
+        public string Categoria { get; set; } = string.Empty;
+        public string Beneficiario { get; set; } = string.Empty;
+        public decimal MontoAporte { get; set; }
+        public decimal Porcentaje { get; set; }
+        public decimal Monto { get; set; }
+        public string Estado { get; set; } = EstadoPendiente;
+        public DateTime? FechaPago { get; set; }
+
+        public bool EsPendiente { get { return Estado == EstadoPendiente; } }
+        public string EstadoTexto { get { return EsPendiente ? "Pendiente" : "Pagada"; } }
+    }
+
+    /// <summary>
     /// Presupuesto mensual con su estado. Gastado, porcentaje y estado los calcula Oracle
     /// (vista vw_sg_uso_presupuesto, procedimiento sp_sg_presupuestos_estado).
     /// </summary>

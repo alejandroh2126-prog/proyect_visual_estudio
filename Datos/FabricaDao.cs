@@ -16,6 +16,7 @@ namespace Datos
         public abstract IProductoDao CrearProductoDao();
         public abstract IVentaDao CrearVentaDao();
         public abstract IMovimientoDao CrearMovimientoDao();
+        public abstract IObligacionSocioDao CrearObligacionSocioDao();
         public abstract IPresupuestoDao CrearPresupuestoDao();
         public abstract IVacanteDao CrearVacanteDao();
         public abstract IPostulacionDao CrearPostulacionDao();
