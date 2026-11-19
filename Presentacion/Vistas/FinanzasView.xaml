@@ -104,6 +104,25 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
+                            <DataGridTemplateColumn Header="Devolver antes del">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding FechaLimite, Converter={StaticResource Fecha}}">
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding EstaVencida}" Value="True">
+                                                            <Setter Property="Foreground" Value="#C62828" />
+                                                            <Setter Property="FontWeight" Value="SemiBold" />
+                                                            <Setter Property="ToolTip" Value="Ya pasó la fecha y no se ha pagado" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Pagada el" Binding="{Binding FechaPago, Converter={StaticResource Fecha}}" />
                         </DataGrid.Columns>
                     </DataGrid>

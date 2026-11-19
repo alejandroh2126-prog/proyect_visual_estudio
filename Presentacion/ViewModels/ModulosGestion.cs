@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Entidades;
+using Logica.Servicios;
 using Logica.Utilidades;
 using Presentacion.Comun;
 
@@ -98,6 +99,7 @@ namespace Presentacion.ViewModels
                     Nombre = form["nombre"].ValorTexto,
                     Descripcion = form["descripcion"].ValorTexto,
                     SectorId = form["sector"].Elegido<Sector>()?.Id ?? 0,
+                    SectorOtro = form["sectorOtro"].ValorTexto,
                     CiudadCodigo = form["ciudad"].Elegido<Ciudad>()?.Codigo ?? string.Empty,
                     FechaInicio = form["fecha"].Fecha ?? DateTime.Today,
                     Estado = nuevo ? Estados.Activo : (form["estado"].Seleccion as string ?? Estados.Activo)
@@ -106,13 +108,26 @@ namespace Presentacion.ViewModels
                 await Fondo.Run(() => App.Servicios.Emprendimientos.Guardar(usuario, datos));
             });
 
+            Sector? sectorActual = e == null ? null : sectores.Find(s => s.Id == e.SectorId);
+            bool esOtro = sectorActual?.Nombre == ServicioCatalogos.SectorOtro;
+            // Si eligen "Otro" aparece este campo para escribir a que se dedica el negocio
+            CampoFormulario sectorOtro = new CampoFormulario("sectorOtro", "¿Cuál es el sector?", TipoCampo.Texto)
+            {
+                MaxLongitud = 80,
+                Visible = esOtro,
+                Texto = esOtro ? e!.SectorOtro : string.Empty,
+                Ayuda = "Por ejemplo: Mascotas, Eventos, Reciclaje."
+            };
+
             f.Agregar(new CampoFormulario("nombre", "Nombre del emprendimiento", TipoCampo.Texto) { MaxLongitud = 150, Texto = e?.Nombre ?? string.Empty });
             f.Agregar(new CampoFormulario("sector", "Sector", TipoCampo.Lista)
             {
                 Opciones = sectores,
-                Seleccion = e == null ? null : sectores.Find(s => s.Id == e.SectorId),
-                Ayuda = "Define los cargos sugeridos en Nómina."
+                Seleccion = sectorActual,
+                Ayuda = "Define los cargos sugeridos en Nómina. Si no está el tuyo, elige \"Otro\" y escríbelo.",
+                AlSeleccionar = o => sectorOtro.Visible = (o as Sector)?.Nombre == ServicioCatalogos.SectorOtro
             });
+            f.Agregar(sectorOtro);
             f.Agregar(new CampoFormulario("ciudad", "Ciudad", TipoCampo.ListaPredictiva)
             {
                 Opciones = ciudades,
@@ -158,49 +173,81 @@ namespace Presentacion.ViewModels
 
         protected override async Task<FormularioViewModel?> CrearFormulario(Cargo? c)
         {
+            bool nuevo = c == null;
             int sector = Sesion.Emprendimiento?.SectorId ?? 0;
-            List<CargoPlantilla> plantillas = await Fondo.Run(() => App.Servicios.Catalogos.PlantillasDeCargo(sector));
+            // Los del sector y, despues, los cargos mas comunes de cualquier negocio
+            List<CargoPlantilla> plantillas = await Fondo.Run(() => App.Servicios.Catalogos.CargosSugeridos(sector));
+            int emp = Sesion.IdEmprendimiento;
+            List<Cargo> existentes = nuevo ? await Fondo.Run(() => App.Servicios.Nomina.Cargos(emp)) : new List<Cargo>();
 
-            FormularioViewModel f = new FormularioViewModel(c == null ? "Nuevo cargo" : "Editar cargo", async form =>
+            FormularioViewModel f = new FormularioViewModel(nuevo ? "Nuevo cargo" : "Editar cargo: " + c!.Nombre, async form =>
             {
                 Cargo datos = new Cargo
                 {
                     Id = c?.Id ?? 0,
-                    PlantillaId = form["plantilla"].Elegido<CargoPlantilla>()?.Id,
+                    PlantillaId = nuevo ? form["plantilla"].Elegido<CargoPlantilla>()?.Id : c!.PlantillaId,
                     Nombre = form["nombre"].ValorTexto,
                     SalarioBase = form["salario"].ValorMoneda,
+                    TipoHorario = form["horario"].Seleccion as string ?? Horarios.TiempoCompleto,
                     Descripcion = form["descripcion"].ValorTexto
                 };
-                int emp = Sesion.IdEmprendimiento;
                 await Fondo.Run(() => App.Servicios.Nomina.GuardarCargo(emp, datos));
             });
 
-            CampoFormulario nombre = new CampoFormulario("nombre", "Nombre del cargo", TipoCampo.Texto) { MaxLongitud = 100, Texto = c?.Nombre ?? string.Empty };
+            CampoFormulario horario = new CampoFormulario("horario", "Tipo de horario", TipoCampo.Lista)
+            {
+                Opciones = Horarios.Todos,
+                Seleccion = c?.TipoHorario ?? Horarios.TiempoCompleto,
+                Ayuda = "Tiempo completo: mínimo " + Formato.Moneda(SalarioMinimo.Para(Horarios.TiempoCompleto)) +
+                        ". Medio tiempo o por turnos: mínimo " + Formato.Moneda(SalarioMinimo.Para(Horarios.MedioTiempo)) + "."
+            };
             CampoFormulario salario = new CampoFormulario("salario", "Salario base mensual", TipoCampo.Moneda)
             {
                 MaxLongitud = 15,
                 Texto = c == null ? string.Empty : Math.Round(c.SalarioBase, 0).ToString(),
                 Ayuda = "Se descuenta 4 % salud + 4 % pensión."
             };
+            CampoFormulario nombre = new CampoFormulario("nombre", "Nombre del cargo", TipoCampo.Texto)
+            {
+                MaxLongitud = 100,
+                Texto = c?.Nombre ?? string.Empty,
+                // Al editar, el nombre queda fijo: los trabajadores y la nómina ya lo usan
+                Habilitado = nuevo,
+                Ayuda = nuevo ? null : "El nombre no se cambia. Si necesitas otro, crea un cargo nuevo."
+            };
             CampoFormulario descripcion = new CampoFormulario("descripcion", "Descripción", TipoCampo.TextoLargo) { Requerido = false, MaxLongitud = 300, Texto = c?.Descripcion ?? string.Empty };
 
-            f.Agregar(new CampoFormulario("plantilla", "Cargo sugerido para tu sector", TipoCampo.ListaPredictiva)
+            // Reglas que se revisan mientras se escribe (el campo se pone en rojo al instante)
+            salario.Regla = () => ServicioNomina.ErrorSalario(salario.ValorMoneda, horario.Seleccion as string);
+            nombre.Regla = () =>
             {
-                Requerido = false,
-                Opciones = plantillas,
-                Seleccion = c?.PlantillaId == null ? null : plantillas.Find(p => p.Id == c.PlantillaId),
-                Ayuda = "Elige uno y se llenan el nombre y el salario sugerido.",
-                AlSeleccionar = o =>
+                Cargo? igual = existentes.Find(x => string.Equals(x.Nombre, nombre.ValorTexto, StringComparison.OrdinalIgnoreCase));
+                return igual == null ? null : "Ya existe el cargo \"" + igual.Nombre + "\".";
+            };
+            // Si cambia el horario, cambia el minimo: se revisa el salario otra vez
+            horario.Cambio += () => salario.Revalidar();
+
+            if (nuevo)
+            {
+                f.Agregar(new CampoFormulario("plantilla", "Cargo sugerido (los más comunes)", TipoCampo.ListaPredictiva)
                 {
-                    if (o is CargoPlantilla p)
+                    Requerido = false,
+                    Opciones = plantillas,
+                    Ayuda = "Elige uno y se llenan el nombre y el salario sugerido. También puedes escribir el tuyo abajo.",
+                    AlSeleccionar = o =>
                     {
-                        nombre.Texto = p.Nombre;
-                        salario.Texto = Math.Round(p.SalarioSugerido, 0).ToString();
-                        if (descripcion.ValorTexto.Length == 0) descripcion.Texto = p.Descripcion;
+                        if (o is CargoPlantilla p)
+                        {
+                            nombre.Texto = p.Nombre;
+                            decimal minimo = SalarioMinimo.Para(horario.Seleccion as string);
+                            salario.Texto = Math.Round(Math.Max(p.SalarioSugerido, minimo), 0).ToString();
+                            if (descripcion.ValorTexto.Length == 0) descripcion.Texto = p.Descripcion;
+                        }
                     }
-                }
-            });
+                });
+            }
             f.Agregar(nombre);
+            f.Agregar(horario);
             f.Agregar(salario);
             f.Agregar(descripcion);
             return f;
@@ -264,19 +311,37 @@ namespace Presentacion.ViewModels
                 await Fondo.Run(() => App.Servicios.Nomina.GuardarTrabajador(emp, datos));
             });
 
+            List<Trabajador> todos = await Fondo.Run(() => App.Servicios.Nomina.Trabajadores(emp));
             TipoDocumento? tipoActual = tipos.Find(x => x.Codigo == (t?.TipoDocumento ?? "CC"));
+            CampoFormulario tipo = new CampoFormulario("tipo", "Tipo de documento", TipoCampo.Lista)
+            {
+                Opciones = tipos,
+                Seleccion = tipoActual,
+                Ayuda = "El formato del número depende del tipo."
+            };
             CampoFormulario numero = new CampoFormulario("numero", "Número de documento", TipoCampo.Texto)
             {
                 MaxLongitud = 20,
                 Texto = t?.NumeroDocumento ?? string.Empty,
-                Ayuda = tipoActual?.Ayuda
+                Ayuda = FormatoDocumento(tipoActual)
             };
-            f.Agregar(new CampoFormulario("tipo", "Tipo de documento", TipoCampo.Lista)
+            // Formato del tipo elegido y numero que ya tenga otro trabajador (aunque sea con otro tipo de documento)
+            numero.Regla = () =>
             {
-                Opciones = tipos,
-                Seleccion = tipoActual,
-                AlSeleccionar = o => { if (o is TipoDocumento td) numero.Ayuda = td.Ayuda; }
-            });
+                TipoDocumento? td = tipo.Elegido<TipoDocumento>();
+                string n = numero.ValorTexto.Replace(".", "").Replace(" ", "").ToUpperInvariant();
+                if (td != null && !System.Text.RegularExpressions.Regex.IsMatch(n, td.Patron))
+                    return "No es un número válido de " + td.Nombre.ToLowerInvariant() + ". " + td.Ayuda;
+                Trabajador? repetido = ServicioNomina.DocumentoRepetido(todos, t?.Id ?? 0, n);
+                return repetido == null ? null
+                    : "Ese número ya es de " + repetido.NombreCompleto + " (" + repetido.TipoDocumento + "). No se puede repetir aunque el tipo sea otro.";
+            };
+            tipo.Cambio += () =>
+            {
+                numero.Ayuda = FormatoDocumento(tipo.Elegido<TipoDocumento>());
+                numero.Revalidar();
+            };
+            f.Agregar(tipo);
             f.Agregar(numero);
             f.Agregar(new CampoFormulario("nombre", "Nombres", TipoCampo.Texto) { MaxLongitud = 100, Texto = t?.Nombre ?? string.Empty });
             f.Agregar(new CampoFormulario("apellido", "Apellidos", TipoCampo.Texto) { MaxLongitud = 100, Texto = t?.Apellido ?? string.Empty });
@@ -294,6 +359,12 @@ namespace Presentacion.ViewModels
             });
             f.Agregar(new CampoFormulario("fecha", "Fecha de ingreso", TipoCampo.Fecha) { Fecha = t?.FechaIngreso ?? DateTime.Today });
             return f;
+        }
+
+        /// <summary>Texto de ayuda con el formato de cada tipo de documento (CC, CE, TI, PA, PPT, PEP).</summary>
+        private static string? FormatoDocumento(TipoDocumento? td)
+        {
+            return td == null ? null : td.Codigo + ": " + td.Ayuda;
         }
 
         protected override async Task EliminarElemento(Trabajador t)

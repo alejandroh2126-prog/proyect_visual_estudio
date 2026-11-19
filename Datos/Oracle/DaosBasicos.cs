@@ -134,7 +134,7 @@ namespace Datos.Oracle
     public class EmprendimientoDaoOracle : IEmprendimientoDao
     {
         private const string Sql =
-            "SELECT id, usuario_id, nombre, descripcion, sector_id, sector, ciudad_codigo, ciudad, fecha_inicio, estado " +
+            "SELECT id, usuario_id, nombre, descripcion, sector_id, sector, sector_otro, ciudad_codigo, ciudad, fecha_inicio, estado " +
             "FROM vw_sg_emprendimientos";
 
         private static Emprendimiento Mapear(OracleDataReader r)
@@ -147,6 +147,7 @@ namespace Datos.Oracle
                 Descripcion = Txt(r, "descripcion"),
                 SectorId = Int(r, "sector_id"),
                 Sector = Txt(r, "sector"),
+                SectorOtro = Txt(r, "sector_otro"),
                 CiudadCodigo = Txt(r, "ciudad_codigo"),
                 Ciudad = Txt(r, "ciudad"),
                 FechaInicio = Fec(r, "fecha_inicio"),
@@ -159,6 +160,7 @@ namespace Datos.Oracle
             Texto(c, "nombre", e.Nombre);
             Texto(c, "descripcion", e.Descripcion);
             Entero(c, "sector", e.SectorId);
+            Texto(c, "otro", e.SectorOtro);
             Texto(c, "ciudad", e.CiudadCodigo);
             Fecha(c, "fecha", e.FechaInicio);
             Texto(c, "estado", e.Estado);
@@ -177,8 +179,8 @@ namespace Datos.Oracle
         public Emprendimiento Insertar(Emprendimiento e)
         {
             e.Id = InsertarConId(
-                "INSERT INTO sg_emprendimiento (usuario_id, nombre, descripcion, sector_id, ciudad_codigo, fecha_inicio, estado) " +
-                "VALUES (:p_usuario, :p_nombre, :p_descripcion, :p_sector, :p_ciudad, :p_fecha, :p_estado)",
+                "INSERT INTO sg_emprendimiento (usuario_id, nombre, descripcion, sector_id, sector_otro, ciudad_codigo, fecha_inicio, estado) " +
+                "VALUES (:p_usuario, :p_nombre, :p_descripcion, :p_sector, :p_otro, :p_ciudad, :p_fecha, :p_estado)",
                 c => { Entero(c, "usuario", e.UsuarioId); Parametros(c, e); });
             return e;
         }
@@ -187,7 +189,7 @@ namespace Datos.Oracle
         {
             EjecutarSql(
                 "UPDATE sg_emprendimiento SET nombre = :p_nombre, descripcion = :p_descripcion, sector_id = :p_sector, " +
-                "ciudad_codigo = :p_ciudad, fecha_inicio = :p_fecha, estado = :p_estado WHERE id = :p_id",
+                "sector_otro = :p_otro, ciudad_codigo = :p_ciudad, fecha_inicio = :p_fecha, estado = :p_estado WHERE id = :p_id",
                 c => { Parametros(c, e); Entero(c, "id", e.Id); });
         }
 
@@ -201,7 +203,7 @@ namespace Datos.Oracle
     {
         private const string Sql =
             "SELECT id, emprendimiento_id, plantilla_id, nombre, salario_base, descripcion, salario_quincenal, " +
-            "deducciones, salario_neto, trabajadores_activos FROM vw_sg_cargos";
+            "deducciones, salario_neto, trabajadores_activos, tipo_horario FROM vw_sg_cargos";
 
         private static Cargo Mapear(OracleDataReader r)
         {
@@ -216,7 +218,8 @@ namespace Datos.Oracle
                 SalarioQuincenal = Dec(r, "salario_quincenal"),
                 Deducciones = Dec(r, "deducciones"),
                 SalarioNeto = Dec(r, "salario_neto"),
-                TrabajadoresActivos = Int(r, "trabajadores_activos")
+                TrabajadoresActivos = Int(r, "trabajadores_activos"),
+                TipoHorario = Txt(r, "tipo_horario")
             };
         }
 
@@ -233,14 +236,15 @@ namespace Datos.Oracle
         public Cargo Insertar(Cargo x)
         {
             x.Id = InsertarConId(
-                "INSERT INTO sg_cargo (emprendimiento_id, plantilla_id, nombre, salario_base, descripcion) " +
-                "VALUES (:p_emp, :p_plantilla, :p_nombre, :p_salario, :p_descripcion)",
+                "INSERT INTO sg_cargo (emprendimiento_id, plantilla_id, nombre, salario_base, tipo_horario, descripcion) " +
+                "VALUES (:p_emp, :p_plantilla, :p_nombre, :p_salario, :p_horario, :p_descripcion)",
                 c =>
                 {
                     Entero(c, "emp", x.EmprendimientoId);
                     Entero(c, "plantilla", x.PlantillaId);
                     Texto(c, "nombre", x.Nombre);
                     Numero(c, "salario", x.SalarioBase);
+                    Texto(c, "horario", x.TipoHorario);
                     Texto(c, "descripcion", x.Descripcion);
                 });
             return x;
@@ -248,13 +252,14 @@ namespace Datos.Oracle
 
         public void Actualizar(Cargo x)
         {
-            EjecutarSql("UPDATE sg_cargo SET plantilla_id = :p_plantilla, nombre = :p_nombre, salario_base = :p_salario, " +
-                        "descripcion = :p_descripcion WHERE id = :p_id",
+            // El nombre NO se actualiza: trg_sg_cargo_valida tampoco deja cambiarlo
+            EjecutarSql("UPDATE sg_cargo SET plantilla_id = :p_plantilla, salario_base = :p_salario, " +
+                        "tipo_horario = :p_horario, descripcion = :p_descripcion WHERE id = :p_id",
                 c =>
                 {
                     Entero(c, "plantilla", x.PlantillaId);
-                    Texto(c, "nombre", x.Nombre);
                     Numero(c, "salario", x.SalarioBase);
+                    Texto(c, "horario", x.TipoHorario);
                     Texto(c, "descripcion", x.Descripcion);
                     Entero(c, "id", x.Id);
                 });
@@ -338,6 +343,12 @@ namespace Datos.Oracle
                 "nombre = :p_nombre, apellido = :p_apellido, telefono = :p_telefono, email = :p_email, " +
                 "ciudad_codigo = :p_ciudad, fecha_ingreso = :p_fecha, estado = :p_estado WHERE id = :p_id",
                 c => { Parametros(c, t); Entero(c, "id", t.Id); });
+        }
+
+        public void CambiarEstado(int id, string estado)
+        {
+            EjecutarSql("UPDATE sg_trabajador SET estado = :p_estado WHERE id = :p_id",
+                c => { Texto(c, "estado", estado); Entero(c, "id", id); });
         }
 
         public bool Eliminar(int id)

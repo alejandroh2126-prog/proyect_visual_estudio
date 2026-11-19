@@ -73,12 +73,23 @@
 
         </StackPanel>
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,0,0,8">
-            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="Dame un resumen del negocio" Content="Resumen" Margin="0,0,8,0" />
-            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Qué productos tienen stock bajo?" Content="Stock bajo" Margin="0,0,8,0" />
-            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cuánto vendí esta semana?" Content="Ventas de la semana" Margin="0,0,8,0" />
-            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cómo van los presupuestos de este mes?" Content="Presupuestos" />
-        </StackPanel>
+        <!-- Preguntas sugeridas: un clic y se envian -->
+        <WrapPanel Grid.Row="4" Margin="0,0,0,8">
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="Dame un resumen del negocio" Content="Resumen" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Qué productos tienen stock bajo?" Content="Stock bajo" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cuánto vendí esta semana?" Content="Ventas de la semana" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cuánto he vendido este mes y cómo va frente al mes pasado?" Content="Ventas del mes" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cuáles son mis 5 productos más vendidos?" Content="Más vendidos" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Qué producto me deja más ganancia?" Content="Mejor margen" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿En qué estoy gastando más este mes?" Content="Gastos del mes" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cómo van los presupuestos de este mes?" Content="Presupuestos" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cuánto pago de nómina al mes y quiénes están activos?" Content="Nómina" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Cuánto le debo devolver a los socios e inversionistas?" Content="Por devolver a socios" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Qué vacantes tengo abiertas y cuántas hojas de vida llegaron?" Content="Vacantes" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="Dame 3 consejos para vender más según mis datos" Content="Consejos para vender más" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="Quiero registrar un gasto" Content="Registrar un gasto" Margin="0,0,8,6" />
+            <Button Style="{StaticResource BotonBarra}" Command="{Binding SugerenciaCommand}" CommandParameter="¿Qué puedo hacer en SGAPE y cómo empiezo?" Content="¿Cómo uso SGAPE?" Margin="0,0,8,6" />
+        </WrapPanel>
 
         <DockPanel Grid.Row="5">
             <Button DockPanel.Dock="Right" Style="{StaticResource BotonPrincipal}" Command="{Binding EnviarCommand}" Margin="12,0,0,0">

@@ -72,6 +72,8 @@ namespace Logica.IA
                     Propiedades(("mes", "string", "Mes aaaa-mm; si no se da, todo el historial"))),
                 Funcion("nomina", "Totales de nómina (mensual, quincenal, deducciones 8 %, neta) y la lista de trabajadores activos.", null),
                 Funcion("vacantes", "Vacantes del emprendimiento con el número de hojas de vida recibidas.", null),
+                Funcion("devoluciones_socios", "Lo que hay que devolver a socios e inversionistas por sus aportes: pendientes, pagadas, montos y fechas límite.", null),
+                Funcion("inventario", "Lista de productos con precio de venta, stock y margen (para preguntas como '¿qué productos tengo?' o '¿cuál deja más ganancia?').", null),
                 Funcion("ayuda_sgape", "Preguntas frecuentes sobre cómo usar SGAPE (aplicación y bot).", null),
                 Funcion("enviar_reporte_pdf", "Envía al chat el reporte completo del emprendimiento en PDF.", null),
                 Funcion("proponer_movimiento", "Prepara un ingreso o gasto para registrar. NO lo guarda: el usuario debe confirmar con un botón.",
@@ -140,6 +142,27 @@ namespace Logica.IA
                         return Json.Texto(lista);
                     }
 
+                    case "devoluciones_socios":
+                    {
+                        List<ObligacionSocio> lista = _s.Finanzas.Obligaciones(emp);
+                        decimal pendiente = 0;
+                        foreach (ObligacionSocio o in lista) if (o.EsPendiente) pendiente += o.Monto;
+                        List<object> filas = new List<object>();
+                        foreach (ObligacionSocio o in lista)
+                            filas.Add(new { o.Beneficiario, o.Categoria, aporte = o.MontoAporte, o.Porcentaje, a_devolver = o.Monto, estado = o.EstadoTexto,
+                                            fecha_limite = o.FechaLimite?.ToString("yyyy-MM-dd"), vencida = o.EstaVencida, pagada_el = o.FechaPago?.ToString("yyyy-MM-dd") });
+                        return Json.Texto(new { total_pendiente = pendiente, devoluciones = filas });
+                    }
+
+                    case "inventario":
+                    {
+                        List<object> lista = new List<object>();
+                        foreach (Producto p in _s.Inventario.Listar(emp))
+                            if (lista.Count < 40)
+                                lista.Add(new { p.Nombre, p.Categoria, p.PrecioVenta, p.Stock, p.StockMinimo, p.MargenPorcentaje });
+                        return Json.Texto(lista);
+                    }
+
                     case "ayuda_sgape":
                         return Json.Texto(_s.Catalogos.PreguntasFrecuentes());
 
@@ -203,6 +226,12 @@ namespace Logica.IA
         {
             JsonArray req = new JsonArray();
             foreach (string r in requeridos) req.Add(r);
+            // Los parametros opcionales aceptan null: el modelo a veces envia "desde": null y Groq
+            // rechazaba la llamada ("expected string, but got null")
+            if (propiedades != null)
+                foreach (KeyValuePair<string, JsonNode?> p in propiedades)
+                    if (Array.IndexOf(requeridos, p.Key) < 0 && p.Value is JsonObject def && def["type"] is JsonValue tipo)
+                        def["type"] = new JsonArray(tipo.ToString(), "null");
             return new JsonObject
             {
                 ["type"] = "function",
@@ -278,6 +307,9 @@ namespace Logica.IA
             "Si una herramienta devuelve error, explícalo con palabras sencillas. " +
             "Para registrar un ingreso o gasto usa proponer_movimiento y di que debe confirmar con el botón; nunca digas que ya quedó guardado. " +
             "No puedes borrar ni modificar otros datos: para eso indica la sección de la aplicación. " +
+            "Si un parámetro de fecha no hace falta, no lo envíes. 'Esta semana' son los últimos 7 días: usa ventas sin fechas. " +
+            "Para lo que se debe a socios o inversionistas usa devoluciones_socios. " +
+            "Puedes dar consejos prácticos de administración, ventas e inventario apoyados en los datos del negocio. " +
             "Si preguntan algo que no es del negocio ni de SGAPE, responde en una línea que solo ayudas con SGAPE y con la administración del emprendimiento.";
 
         private readonly GroqCliente _groq;
@@ -302,7 +334,7 @@ namespace Logica.IA
                 new JsonObject
                 {
                     ["role"] = "system",
-                    ["content"] = Instrucciones + " Hoy es " + DateTime.Now.ToString("yyyy-MM-dd") + ". Emprendimiento activo: " +
+                    ["content"] = Instrucciones + " Hoy es " + DateTime.Now.ToString("dddd yyyy-MM-dd", new CultureInfo("es-CO")) + ". Emprendimiento activo: " +
                                   ctx.Emprendimiento.Nombre + " (" + ctx.Emprendimiento.Sector + ", " + ctx.Emprendimiento.Ciudad + ")."
                 }
             };
@@ -369,13 +401,23 @@ namespace Logica.IA
                 ["temperature"] = 0.2,
                 ["max_tokens"] = 900
             };
-            using StringContent contenido = new StringContent(cuerpo.ToJsonString(), Encoding.UTF8, "application/json");
-            using HttpResponseMessage r = await _http.PostAsync("chat/completions", contenido, ct);
-            string texto = await r.Content.ReadAsStringAsync(ct);
-            if ((int)r.StatusCode == 429)
-                throw new LimiteGroqException();
-            if (!r.IsSuccessStatusCode)
+            string texto = string.Empty;
+            for (int intento = 1; intento <= 2; intento++)
+            {
+                using StringContent contenido = new StringContent(cuerpo.ToJsonString(), Encoding.UTF8, "application/json");
+                using HttpResponseMessage r = await _http.PostAsync("chat/completions", contenido, ct);
+                texto = await r.Content.ReadAsStringAsync(ct);
+                if ((int)r.StatusCode == 429)
+                    throw new LimiteGroqException();
+                if (r.IsSuccessStatusCode) break;
+                // El modelo a veces arma mal los argumentos de una herramienta: se intenta una vez mas
+                if (intento == 1 && (int)r.StatusCode == 400 && texto.Contains("tool_use_failed"))
+                {
+                    cuerpo["temperature"] = 0;
+                    continue;
+                }
                 throw new InvalidOperationException("Groq respondió " + (int)r.StatusCode + ": " + Recortar(texto, 300));
+            }
 
             JsonNode? json = JsonNode.Parse(texto);
             return json?["choices"]?[0]?["message"] as JsonObject

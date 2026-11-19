@@ -14,6 +14,9 @@ id sgape >/dev/null 2>&1 || sudo useradd --system --home /opt/sgape-bot --shell 
 sudo mkdir -p /opt/sgape-bot
 sudo systemctl stop sgape-bot 2>/dev/null || true
 
+# Hora de Colombia: las fechas que registra el bot (gastos, ingresos) usan la hora del servidor
+sudo timedatectl set-timezone America/Bogota 2>/dev/null || true
+
 sudo install -m 755 "$P/sgape-bot" /opt/sgape-bot/sgape-bot
 sudo rm -rf /opt/sgape-bot/wallet && sudo cp -r "$P/wallet" /opt/sgape-bot/wallet
 sudo chown -R sgape:sgape /opt/sgape-bot && sudo chmod 700 /opt/sgape-bot/wallet

@@ -4,15 +4,28 @@
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:c="clr-namespace:Presentacion.Comun">
     <UserControl.Resources>
+        <!-- Campo con error: borde rojo al instante (sin esperar a Guardar) -->
+        <SolidColorBrush x:Key="RojoError" Color="#C62828" />
         <!-- Texto y numeros (los numericos solo aceptan digitos: validacion en la interfaz) -->
         <DataTemplate x:Key="PlantillaTexto">
-            <TextBox Style="{StaticResource MaterialDesignOutlinedTextBox}"
-                     Text="{Binding Texto, UpdateSourceTrigger=PropertyChanged}"
+            <TextBox Text="{Binding Texto, UpdateSourceTrigger=PropertyChanged}"
                      MaxLength="{Binding MaxLongitud}"
                      md:HintAssist.Hint="{Binding Pista}"
                      md:HintAssist.HelperText="{Binding Ayuda}"
                      c:SoloNumeros.Activo="{Binding EsNumerico}"
-                     c:SoloNumeros.Negativos="{Binding PermiteNegativos}" />
+                     c:SoloNumeros.Negativos="{Binding PermiteNegativos}">
+                <TextBox.Style>
+                    <Style TargetType="TextBox" BasedOn="{StaticResource MaterialDesignOutlinedTextBox}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding TieneError}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource RojoError}" />
+                                <Setter Property="md:TextFieldAssist.UnderlineBrush" Value="{StaticResource RojoError}" />
+                                <Setter Property="md:HintAssist.Foreground" Value="{StaticResource RojoError}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBox.Style>
+            </TextBox>
         </DataTemplate>
 
         <DataTemplate x:Key="PlantillaTextoLargo">
@@ -32,21 +45,40 @@
         </DataTemplate>
 
         <DataTemplate x:Key="PlantillaLista">
-            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                      ItemsSource="{Binding Opciones}"
+            <ComboBox ItemsSource="{Binding Opciones}"
                       SelectedItem="{Binding Seleccion}"
                       md:HintAssist.Hint="{Binding Pista}"
-                      md:HintAssist.HelperText="{Binding Ayuda}" />
+                      md:HintAssist.HelperText="{Binding Ayuda}">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource MaterialDesignOutlinedComboBox}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding TieneError}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource RojoError}" />
+                                <Setter Property="md:TextFieldAssist.UnderlineBrush" Value="{StaticResource RojoError}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ComboBox.Style>
+            </ComboBox>
         </DataTemplate>
 
         <!-- Texto predictivo: al escribir "Valle" la lista completa "Valledupar (Cesar)" -->
         <DataTemplate x:Key="PlantillaListaPredictiva">
-            <ComboBox Style="{StaticResource MaterialDesignOutlinedComboBox}"
-                      IsEditable="True" IsTextSearchEnabled="True" StaysOpenOnEdit="True"
+            <ComboBox IsEditable="True" IsTextSearchEnabled="True" StaysOpenOnEdit="True"
                       ItemsSource="{Binding Opciones}"
                       SelectedItem="{Binding Seleccion}"
                       md:HintAssist.Hint="{Binding Pista}"
                       md:HintAssist.HelperText="{Binding Ayuda}">
+                <ComboBox.Style>
+                    <Style TargetType="ComboBox" BasedOn="{StaticResource MaterialDesignOutlinedComboBox}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding TieneError}" Value="True">
+                                <Setter Property="BorderBrush" Value="{StaticResource RojoError}" />
+                                <Setter Property="md:TextFieldAssist.UnderlineBrush" Value="{StaticResource RojoError}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ComboBox.Style>
                 <ComboBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <VirtualizingStackPanel />

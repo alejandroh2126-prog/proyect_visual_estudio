@@ -45,7 +45,7 @@ namespace Logica
             Planes = new ServicioPlanes(usuarios);
             Autenticacion = new ServicioAutenticacion(usuarios);
             Catalogos = new ServicioCatalogos(fabricaDao.CrearCatalogoDao(), productos);
-            Emprendimientos = new ServicioEmprendimientos(fabricaDao.CrearEmprendimientoDao(), _reportes, Planes);
+            Emprendimientos = new ServicioEmprendimientos(fabricaDao.CrearEmprendimientoDao(), _reportes, Planes, Catalogos);
             Nomina = new ServicioNomina(cargos, fabricaDao.CrearTrabajadorDao(), _reportes, Catalogos);
             Inventario = new ServicioInventario(productos);
             Ventas = new ServicioVentas(fabricaDao.CrearVentaDao(), productos, _reportes);

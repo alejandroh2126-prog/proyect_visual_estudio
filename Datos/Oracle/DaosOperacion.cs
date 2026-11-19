@@ -266,7 +266,7 @@ namespace Datos.Oracle
     {
         private const string Sql =
             "SELECT id, emprendimiento_id, movimiento_id, fecha_aporte, categoria, beneficiario, monto_aporte, porcentaje, " +
-            "monto, estado, fecha_pago FROM vw_sg_obligaciones_socio";
+            "monto, estado, fecha_pago, fecha_limite FROM vw_sg_obligaciones_socio";
 
         private static ObligacionSocio Mapear(OracleDataReader r)
         {
@@ -282,7 +282,8 @@ namespace Datos.Oracle
                 Porcentaje = Dec(r, "porcentaje"),
                 Monto = Dec(r, "monto"),
                 Estado = Txt(r, "estado"),
-                FechaPago = FecNula(r, "fecha_pago")
+                FechaPago = FecNula(r, "fecha_pago"),
+                FechaLimite = FecNula(r, "fecha_limite")
             };
         }
 
@@ -299,13 +300,13 @@ namespace Datos.Oracle
             return Uno(Sql + " WHERE movimiento_id = :p_mov", Mapear, c => Entero(c, "mov", movimientoId));
         }
 
-        public int RegistrarAporte(Movimiento ingreso, string beneficiario, decimal porcentaje, bool gastoInmediato)
+        public int RegistrarAporte(Movimiento ingreso, string beneficiario, decimal porcentaje, bool gastoInmediato, DateTime? fechaLimite)
         {
             return Ejecutar(con =>
             {
                 using (OracleCommand cmd = Comando(con,
                     "BEGIN sp_sg_registrar_aporte(:p_emp, :p_categoria, :p_descripcion, :p_monto, :p_fecha, " +
-                    ":p_beneficiario, :p_porcentaje, :p_inmediato, :p_movimiento, :p_obligacion); END;"))
+                    ":p_beneficiario, :p_porcentaje, :p_inmediato, :p_movimiento, :p_obligacion, :p_limite); END;"))
                 {
                     Entero(cmd, "emp", ingreso.EmprendimientoId);
                     Entero(cmd, "categoria", ingreso.CategoriaId);
@@ -317,6 +318,7 @@ namespace Datos.Oracle
                     Texto(cmd, "inmediato", gastoInmediato ? "S" : "N");
                     OracleParameter movimiento = Param(cmd, "movimiento", OracleDbType.Int32, null, ParameterDirection.Output);
                     Param(cmd, "obligacion", OracleDbType.Int32, null, ParameterDirection.Output);
+                    Fecha(cmd, "limite", fechaLimite?.Date);
                     cmd.ExecuteNonQuery();
                     return SalidaEntero(movimiento);
                 }

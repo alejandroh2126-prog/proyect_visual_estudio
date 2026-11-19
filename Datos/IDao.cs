@@ -60,6 +60,9 @@ namespace Datos
         Trabajador? ObtenerPorId(int id);
         Trabajador Insertar(Trabajador t);
         void Actualizar(Trabajador t);
+
+        /// <summary>Solo cambia activo/inactivo (no toca el documento).</summary>
+        void CambiarEstado(int id, string estado);
         bool Eliminar(int id);
     }
 
@@ -109,7 +112,7 @@ namespace Datos
         ObligacionSocio? PorMovimiento(int movimientoId);
 
         /// <summary>sp_sg_registrar_aporte: el ingreso y su devolucion en una sola transaccion. Devuelve el id del ingreso.</summary>
-        int RegistrarAporte(Movimiento ingreso, string beneficiario, decimal porcentaje, bool gastoInmediato);
+        int RegistrarAporte(Movimiento ingreso, string beneficiario, decimal porcentaje, bool gastoInmediato, DateTime? fechaLimite);
 
         /// <summary>sp_sg_pagar_obligacion: registra la devolucion como gasto.</summary>
         void Pagar(int emprendimientoId, int obligacionId, DateTime fecha);

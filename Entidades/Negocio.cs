@@ -86,6 +86,9 @@ namespace Entidades
         public string Descripcion { get; set; } = string.Empty;
         public int SectorId { get; set; }
         public string Sector { get; set; } = string.Empty;
+
+        /// <summary>Cuando el sector es "Otro": a que se dedica (por ejemplo "Mascotas").</summary>
+        public string SectorOtro { get; set; } = string.Empty;
         public string CiudadCodigo { get; set; } = string.Empty;
         public string Ciudad { get; set; } = string.Empty;
         public DateTime FechaInicio { get; set; } = DateTime.Today;
@@ -105,6 +108,7 @@ namespace Entidades
         public int? PlantillaId { get; set; }
         public string Nombre { get; set; } = string.Empty;
         public decimal SalarioBase { get; set; }
+        public string TipoHorario { get; set; } = Horarios.TiempoCompleto;
         public string Descripcion { get; set; } = string.Empty;
 
         public decimal SalarioQuincenal { get; set; }
@@ -287,6 +291,32 @@ namespace Entidades
         public bool EsManual { get { return string.IsNullOrEmpty(Referencia); } }
     }
 
+    /// <summary>Tipos de horario de un cargo. El salario minimo depende del horario.</summary>
+    public static class Horarios
+    {
+        public const string TiempoCompleto = "Tiempo completo";
+        public const string MedioTiempo = "Medio tiempo";
+        public const string PorTurnos = "Por turnos";
+        public static readonly string[] Todos = { TiempoCompleto, MedioTiempo, PorTurnos };
+    }
+
+    /// <summary>
+    /// Salario minimo mensual legal vigente de Colombia (SMMLV 2026). Es el mismo valor de fn_sg_salario_minimo
+    /// en Oracle: actualizar los dos cada enero.
+    /// </summary>
+    public static class SalarioMinimo
+    {
+        public const decimal Smmlv2026 = 1750905m;
+
+        /// <summary>Tiempo completo: 1 SMMLV. Medio tiempo y por turnos: medio SMMLV.</summary>
+        public static decimal Para(string? tipoHorario)
+        {
+            return tipoHorario == Horarios.MedioTiempo || tipoHorario == Horarios.PorTurnos
+                ? Math.Round(Smmlv2026 / 2m, 0, MidpointRounding.AwayFromZero)
+                : Smmlv2026;
+        }
+    }
+
     /// <summary>
     /// Lo que hay que devolverle a un socio o inversionista por un aporte: un porcentaje del ingreso.
     /// Queda pendiente hasta que se paga; al pagarla se registra un gasto "Devolución a socios".
@@ -308,7 +338,11 @@ namespace Entidades
         public string Estado { get; set; } = EstadoPendiente;
         public DateTime? FechaPago { get; set; }
 
+        /// <summary>Hasta cuando hay que devolverle (opcional).</summary>
+        public DateTime? FechaLimite { get; set; }
+
         public bool EsPendiente { get { return Estado == EstadoPendiente; } }
+        public bool EstaVencida { get { return EsPendiente && FechaLimite.HasValue && FechaLimite.Value.Date < DateTime.Today; } }
         public string EstadoTexto { get { return EsPendiente ? "Pendiente" : "Pagada"; } }
     }
 

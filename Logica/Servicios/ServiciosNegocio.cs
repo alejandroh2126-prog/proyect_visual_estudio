@@ -27,22 +27,44 @@ namespace Logica.Servicios
         public ResumenNomina Resumen(int emprendimientoId) { return _reportes.Nomina(emprendimientoId); }
         public List<FilaNomina> Detalle(int emprendimientoId) { return _reportes.DetalleNomina(emprendimientoId); }
 
+        /// <summary>Mensaje si el salario no alcanza el minimo legal para el horario; null si esta bien.</summary>
+        public static string? ErrorSalario(decimal salario, string? tipoHorario)
+        {
+            decimal minimo = SalarioMinimo.Para(tipoHorario);
+            if (salario < minimo)
+                return "Para " + (tipoHorario ?? Horarios.TiempoCompleto).ToLowerInvariant() + " el salario mínimo es " + Formato.Moneda(minimo) +
+                       (minimo < SalarioMinimo.Smmlv2026 ? " (medio salario mínimo)." : " (salario mínimo 2026).");
+            if (salario > 999_999_999m) return "El salario es demasiado alto.";
+            return null;
+        }
+
         public Cargo GuardarCargo(int emprendimientoId, Cargo c)
         {
-            c.Nombre = Validar.Requerido(c.Nombre, "Nombre del cargo", 100);
             c.Descripcion = Validar.Opcional(c.Descripcion, "Descripción", 300);
-            Validar.MayorQueCero(c.SalarioBase, "Salario base");
-            Validar.Maximo(c.SalarioBase, 999_999_999m, "Salario base");
+            if (Array.IndexOf(Horarios.Todos, c.TipoHorario) < 0)
+                throw new ReglaDeNegocioException("Elige el tipo de horario: tiempo completo, medio tiempo o por turnos.");
+            string? errorSalario = ErrorSalario(c.SalarioBase, c.TipoHorario);
+            if (errorSalario != null) throw new ReglaDeNegocioException(errorSalario);
+
+            if (c.Id != 0)
+            {
+                // Editar: el nombre del cargo no cambia (los trabajadores y la nomina ya lo usan)
+                Cargo? actual = _cargos.ObtenerPorId(c.Id);
+                Propio(actual?.EmprendimientoId, emprendimientoId, "Cargo");
+                c.Nombre = actual!.Nombre;
+                c.EmprendimientoId = emprendimientoId;
+                _cargos.Actualizar(c);
+                return c;
+            }
+
+            c.Nombre = Validar.Requerido(c.Nombre, "Nombre del cargo", 100);
 
             foreach (Cargo otro in _cargos.ListarPorEmprendimiento(emprendimientoId))
                 if (otro.Id != c.Id && string.Equals(otro.Nombre, c.Nombre, StringComparison.OrdinalIgnoreCase))
                     throw new ReglaDeNegocioException("Ya existe el cargo '" + otro.Nombre + "'.");
 
             c.EmprendimientoId = emprendimientoId;
-            if (c.Id == 0) return _cargos.Insertar(c);
-            Propio(_cargos.ObtenerPorId(c.Id)?.EmprendimientoId, emprendimientoId, "Cargo");
-            _cargos.Actualizar(c);
-            return c;
+            return _cargos.Insertar(c);
         }
 
         public void EliminarCargo(int emprendimientoId, int cargoId)
@@ -67,9 +89,11 @@ namespace Logica.Servicios
             Cargo? cargo = _cargos.ObtenerPorId(t.CargoId);
             Propio(cargo?.EmprendimientoId, emprendimientoId, "Cargo");
 
-            foreach (Trabajador otro in _trabajadores.ListarPorEmprendimiento(emprendimientoId))
-                if (otro.Id != t.Id && otro.TipoDocumento == t.TipoDocumento && otro.NumeroDocumento == t.NumeroDocumento)
-                    throw new ReglaDeNegocioException("Ya existe un trabajador con " + t.TipoDocumento + " " + t.NumeroDocumento + ": " + otro.NombreCompleto + ".");
+            // El mismo numero no se repite aunque el tipo sea distinto (CC 123 y CE 123)
+            Trabajador? repetido = DocumentoRepetido(_trabajadores.ListarPorEmprendimiento(emprendimientoId), t.Id, t.NumeroDocumento);
+            if (repetido != null)
+                throw new ReglaDeNegocioException("El número " + t.NumeroDocumento + " ya es de " + repetido.NombreCompleto +
+                                                  " (" + repetido.TipoDocumento + "). No se puede repetir aunque el tipo de documento sea otro.");
 
             t.EmprendimientoId = emprendimientoId;
             if (t.Id == 0) return _trabajadores.Insertar(t);
@@ -78,12 +102,21 @@ namespace Logica.Servicios
             return t;
         }
 
+        /// <summary>Trabajador que ya tiene ese numero de documento (sin importar el tipo), o null.</summary>
+        public static Trabajador? DocumentoRepetido(IEnumerable<Trabajador> trabajadores, int idActual, string numero)
+        {
+            string n = (numero ?? string.Empty).Replace(".", "").Replace(" ", "").Trim().ToUpperInvariant();
+            if (n.Length == 0) return null;
+            foreach (Trabajador otro in trabajadores)
+                if (otro.Id != idActual && string.Equals(otro.NumeroDocumento, n, StringComparison.OrdinalIgnoreCase)) return otro;
+            return null;
+        }
+
         public void CambiarEstado(int emprendimientoId, int trabajadorId)
         {
             Trabajador? t = _trabajadores.ObtenerPorId(trabajadorId);
             Propio(t?.EmprendimientoId, emprendimientoId, "Trabajador");
-            t!.Estado = t.EstaActivo ? Estados.Inactivo : Estados.Activo;
-            _trabajadores.Actualizar(t);
+            _trabajadores.CambiarEstado(trabajadorId, t!.EstaActivo ? Estados.Inactivo : Estados.Activo);
         }
 
         public void EliminarTrabajador(int emprendimientoId, int trabajadorId)
@@ -273,7 +306,7 @@ namespace Logica.Servicios
         /// Todo ocurre en una sola transaccion de Oracle (sp_sg_registrar_aporte).
         /// </summary>
         public Movimiento RegistrarAporte(int emprendimientoId, int categoriaId, string? descripcion, decimal monto, DateTime fecha,
-                                          string? beneficiario, decimal porcentaje, bool gastoInmediato)
+                                          string? beneficiario, decimal porcentaje, bool gastoInmediato, DateTime? fechaLimite = null)
         {
             Movimiento m = Preparar(emprendimientoId, true, categoriaId, descripcion, monto, fecha);
             CategoriaMovimiento cat = _catalogos.Categorias().Find(c => c.Id == categoriaId)!;
@@ -285,7 +318,11 @@ namespace Logica.Servicios
             if (Math.Round(m.Monto * porcentaje / 100m, 2) <= 0)
                 throw new ReglaDeNegocioException("Con ese porcentaje la devolución queda en $0. Revisa el monto o el porcentaje.");
 
-            m.Id = _obligaciones.RegistrarAporte(m, socio, Math.Round(porcentaje, 2), gastoInmediato);
+            if (gastoInmediato) fechaLimite = null;
+            if (fechaLimite.HasValue && fechaLimite.Value.Date < fecha.Date)
+                throw new ReglaDeNegocioException("La fecha para devolver no puede ser anterior a la fecha del aporte.");
+
+            m.Id = _obligaciones.RegistrarAporte(m, socio, Math.Round(porcentaje, 2), gastoInmediato, fechaLimite);
             return m;
         }
 

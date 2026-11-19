@@ -135,9 +135,43 @@ namespace Logica.Servicios
             }
         }
 
+        /// <summary>Categorias sugeridas para un producto nuevo (ademas de las que ya usa el emprendimiento).</summary>
+        public static readonly string[] CategoriasProductoBase =
+        {
+            "Alimentos", "Bebidas", "Snacks y dulces", "Panadería y repostería", "Lácteos", "Frutas y verduras",
+            "Aseo y limpieza", "Cuidado personal", "Belleza", "Salud", "Ropa", "Calzado", "Accesorios",
+            "Hogar", "Papelería", "Tecnología", "Electrodomésticos", "Ferretería", "Juguetes", "Mascotas",
+            "Deportes", "Servicios", "Otros"
+        };
+
+        /// <summary>Primero las categorias que ya usa el emprendimiento y despues las sugeridas.</summary>
         public List<string> CategoriasDeProducto(int emprendimientoId)
         {
-            return _productos.CategoriasUsadas(emprendimientoId);
+            List<string> lista = new List<string>(_productos.CategoriasUsadas(emprendimientoId));
+            foreach (string c in CategoriasProductoBase)
+                if (!lista.Exists(x => string.Equals(x, c, StringComparison.OrdinalIgnoreCase))) lista.Add(c);
+            return lista;
+        }
+
+        public const string SectorOtro = "Otro";
+
+        public bool EsSectorOtro(int sectorId)
+        {
+            return Sectores().Exists(s => s.Id == sectorId && s.Nombre == SectorOtro);
+        }
+
+        /// <summary>
+        /// Cargos sugeridos al crear un cargo: los del sector del emprendimiento y despues los mas comunes
+        /// de cualquier negocio (los del sector "Otro"), sin repetir nombres.
+        /// </summary>
+        public List<CargoPlantilla> CargosSugeridos(int sectorId)
+        {
+            List<CargoPlantilla> lista = new List<CargoPlantilla>(PlantillasDeCargo(sectorId));
+            Sector? otro = Sectores().Find(s => s.Nombre == SectorOtro);
+            if (otro != null && otro.Id != sectorId)
+                foreach (CargoPlantilla p in PlantillasDeCargo(otro.Id))
+                    if (!lista.Exists(x => string.Equals(x.Nombre, p.Nombre, StringComparison.OrdinalIgnoreCase))) lista.Add(p);
+            return lista;
         }
 
         public List<PreguntaFrecuente> PreguntasFrecuentes() { return _catalogos.PreguntasFrecuentes(); }
@@ -178,12 +212,14 @@ namespace Logica.Servicios
         private readonly IEmprendimientoDao _emprendimientos;
         private readonly IReporteDao _reportes;
         private readonly ServicioPlanes _planes;
+        private readonly ServicioCatalogos _catalogos;
 
-        public ServicioEmprendimientos(IEmprendimientoDao emprendimientos, IReporteDao reportes, ServicioPlanes planes)
+        public ServicioEmprendimientos(IEmprendimientoDao emprendimientos, IReporteDao reportes, ServicioPlanes planes, ServicioCatalogos catalogos)
         {
             _emprendimientos = emprendimientos;
             _reportes = reportes;
             _planes = planes;
+            _catalogos = catalogos;
         }
 
         public List<Emprendimiento> Listar(int usuarioId)
@@ -210,6 +246,10 @@ namespace Logica.Servicios
             e.Nombre = Validar.Requerido(e.Nombre, "Nombre", 150);
             e.Descripcion = Validar.Opcional(e.Descripcion, "Descripción", 500);
             Validar.Seleccionado(e.SectorId, "Sector");
+            // Sector "Otro": hay que decir cual (Oracle lo vuelve a revisar con trg_sg_emprendimiento_sector)
+            e.SectorOtro = _catalogos.EsSectorOtro(e.SectorId)
+                ? Validar.Requerido(e.SectorOtro, "¿A qué se dedica? (sector)", 80)
+                : string.Empty;
             Validar.Seleccionado(e.CiudadCodigo, "Ciudad");
             Validar.FechaNoFutura(e.FechaInicio, "Fecha de inicio");
             if (e.Estado != Estados.Activo && e.Estado != Estados.Inactivo)

@@ -59,6 +59,25 @@ namespace Presentacion.Comun
         /// <summary>Se ejecuta cuando cambia el texto (por ejemplo: recalcular cuanto se devuelve).</summary>
         public Action<string>? AlEscribir { get; init; }
 
+        /// <summary>
+        /// Regla propia del campo (salario minimo, formato del documento, documento repetido...).
+        /// Devuelve el mensaje de error o null. Se revisa MIENTRAS se escribe, no solo al guardar.
+        /// </summary>
+        public Func<string?>? Regla { get; set; }
+
+        /// <summary>Avisa cualquier cambio del valor (para revisar otro campo que depende de este).</summary>
+        public event Action? Cambio;
+
+        /// <summary>
+        /// El formulario ya esta en pantalla: desde aqui cada cambio se valida al instante y el campo
+        /// se pone en rojo sin esperar al boton Guardar.
+        /// </summary>
+        internal bool EnVivo { get; set; }
+
+        public bool TieneError { get { return !string.IsNullOrEmpty(Error); } }
+
+        partial void OnErrorChanged(string? value) { OnPropertyChanged(nameof(TieneError)); }
+
         public CampoFormulario(string clave, string etiqueta, TipoCampo tipo)
         {
             Clave = clave;
@@ -74,10 +93,29 @@ namespace Presentacion.Comun
         {
             Error = null;
             AlSeleccionar?.Invoke(value);
+            if (EnVivo) Validar();
+            Cambio?.Invoke();
         }
 
-        partial void OnTextoChanged(string value) { Error = null; AlEscribir?.Invoke(value); }
-        partial void OnFechaChanged(DateTime? value) { Error = null; }
+        partial void OnTextoChanged(string value)
+        {
+            Error = null;
+            AlEscribir?.Invoke(value);
+            if (EnVivo) Validar();
+            Cambio?.Invoke();
+        }
+
+        partial void OnFechaChanged(DateTime? value)
+        {
+            Error = null;
+            if (EnVivo) Validar();
+        }
+
+        /// <summary>Si el campo ya muestra un error (o tiene algo escrito), lo vuelve a revisar. Para reglas que dependen de otro campo.</summary>
+        public void Revalidar()
+        {
+            if (EnVivo && (TieneError || ValorTexto.Length > 0 || Seleccion != null)) Validar();
+        }
 
         // ---------- Lectura de valores ----------
 
@@ -138,6 +176,9 @@ namespace Presentacion.Comun
                     }
                     break;
             }
+            // Regla propia: solo si el formato basico esta bien y hay algo que revisar
+            if (Error == null && Regla != null && (ValorTexto.Length > 0 || Seleccion != null || Fecha != null))
+                Error = Regla();
             return Error == null;
         }
     }
@@ -164,6 +205,7 @@ namespace Presentacion.Comun
         public CampoFormulario Agregar(CampoFormulario campo)
         {
             Campos.Add(campo);
+            campo.EnVivo = true;   // los valores iniciales ya se pusieron: desde ahora se valida al escribir
             return campo;
         }
 

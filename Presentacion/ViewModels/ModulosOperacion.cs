@@ -530,6 +530,11 @@ namespace Presentacion.ViewModels
             CampoFormulario modo = new CampoFormulario("modo", "La devolución", TipoCampo.Lista)
                 { Requerido = false, Visible = false, Opciones = new[] { DevolucionPendiente, DevolucionInmediata }, Seleccion = DevolucionPendiente,
                   Ayuda = "Pendiente: aparece en la pestaña \"Por devolver\" hasta que la pagues." };
+            CampoFormulario limite = new CampoFormulario("limite", "¿Cuándo hay que devolverle?", TipoCampo.Fecha)
+                { Requerido = false, Visible = false, Ayuda = "Opcional. Si pasa la fecha y no se ha pagado, sale en rojo en \"Por devolver\"." };
+            limite.Regla = () => limite.Fecha.HasValue && limite.Fecha.Value.Date < DateTime.Today
+                ? "Elige hoy o una fecha futura." : null;
+            modo.Cambio += () => limite.Visible = porcentaje.Visible && (modo.Seleccion as string) == DevolucionPendiente;
 
             recalcular = () =>
             {
@@ -554,11 +559,13 @@ namespace Presentacion.ViewModels
                 {
                     bool inmediata = (modo.Seleccion as string) == DevolucionInmediata;
                     string nombre = socio.ValorTexto;
-                    await Fondo.Run(() => App.Servicios.Finanzas.RegistrarAporte(emp, categoria, descripcion, valor, fecha, nombre, p, inmediata));
+                    DateTime? hasta = inmediata ? null : limite.Fecha;
+                    await Fondo.Run(() => App.Servicios.Finanzas.RegistrarAporte(emp, categoria, descripcion, valor, fecha, nombre, p, inmediata, hasta));
                     string devolver = Formato.Moneda(ServicioFinanzas.MontoDevolucion(valor, p));
                     mensaje = inmediata
                         ? "Ingreso registrado y devolución de " + devolver + " a " + nombre + " registrada como gasto."
-                        : "Ingreso registrado. Devolución de " + devolver + " a " + nombre + " pendiente en \"Por devolver\".";
+                        : "Ingreso registrado. Devolución de " + devolver + " a " + nombre + " pendiente en \"Por devolver\"" +
+                          (hasta.HasValue ? " (hasta el " + hasta.Value.ToString("dd/MM/yyyy") + ")." : ".");
                 }
                 else
                 {
@@ -572,6 +579,7 @@ namespace Presentacion.ViewModels
                 {
                     bool devolucion = ingreso && (elegido as CategoriaMovimiento)?.PermiteDevolucion == true;
                     socio.Visible = porcentaje.Visible = modo.Visible = devolucion;
+                    limite.Visible = devolucion && (modo.Seleccion as string) == DevolucionPendiente;
                     recalcular();
                 }
             });
@@ -583,6 +591,7 @@ namespace Presentacion.ViewModels
                 f.Agregar(socio);
                 f.Agregar(porcentaje);
                 f.Agregar(modo);
+                f.Agregar(limite);
             }
 
             if (await Notificador.Formulario(f))

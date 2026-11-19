@@ -40,17 +40,33 @@
                             </Button>
                         </v:BarraCrud.Extra>
                     </v:BarraCrud>
-                    <DataGrid ItemsSource="{Binding Vista}" SelectedItem="{Binding Seleccionado}" Style="{StaticResource Tabla}">
+                    <TextBlock DockPanel.Dock="Bottom" Margin="4,6,0,0" FontSize="12" Opacity="0.7"
+                               Text="Los trabajadores inactivos se ven en rojo y no cuentan en la nómina. Si la tabla no cabe, usa la barra de abajo para desplazarte." />
+                    <!-- Columnas a su tamaño + barra horizontal: ningun dato queda cortado -->
+                    <DataGrid ItemsSource="{Binding Vista}" SelectedItem="{Binding Seleccionado}" Style="{StaticResource Tabla}"
+                              HorizontalScrollBarVisibility="Auto" ColumnWidth="Auto">
                         <DataGrid.InputBindings>
                             <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditarCommand}" />
                         </DataGrid.InputBindings>
+                        <!-- Inactivo: toda la fila en rojo -->
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow" BasedOn="{StaticResource MaterialDesignDataGridRow}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding EstaActivo}" Value="False">
+                                        <Setter Property="Background" Value="#FFEBEE" />
+                                        <Setter Property="Foreground" Value="#C62828" />
+                                        <Setter Property="ToolTip" Value="Inactivo: no cuenta en la nómina" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <!-- Tipo y numero de documento en columnas separadas -->
                             <DataGridTextColumn Header="Tipo doc." Binding="{Binding TipoDocumento}" />
                             <DataGridTextColumn Header="Número" Binding="{Binding NumeroDocumento}" />
-                            <DataGridTextColumn Header="Nombres" Binding="{Binding Nombre}" Width="*" />
-                            <DataGridTextColumn Header="Apellidos" Binding="{Binding Apellido}" Width="*" />
-                            <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo}" Width="*" />
+                            <DataGridTextColumn Header="Nombres" Binding="{Binding Nombre}" MinWidth="120" />
+                            <DataGridTextColumn Header="Apellidos" Binding="{Binding Apellido}" MinWidth="120" />
+                            <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo}" MinWidth="110" />
                             <DataGridTextColumn Header="Salario" Binding="{Binding SalarioBase, Converter={StaticResource Moneda}}" />
                             <DataGridTextColumn Header="Celular" Binding="{Binding Telefono}" />
                             <DataGridTextColumn Header="Ingreso" Binding="{Binding FechaIngreso, Converter={StaticResource Fecha}}" />
@@ -74,7 +90,8 @@
                             <MouseBinding Gesture="LeftDoubleClick" Command="{Binding EditarCommand}" />
                         </DataGrid.InputBindings>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Cargo" Binding="{Binding Nombre}" Width="*" />
+                            <DataGridTextColumn Header="Cargo" Binding="{Binding Nombre}" Width="*" MinWidth="140" />
+                            <DataGridTextColumn Header="Horario" Binding="{Binding TipoHorario}" />
                             <DataGridTextColumn Header="Salario base" Binding="{Binding SalarioBase, Converter={StaticResource Moneda}}" />
                             <DataGridTextColumn Header="Quincena" Binding="{Binding SalarioQuincenal, Converter={StaticResource Moneda}}" />
                             <DataGridTextColumn Header="Deducciones" Binding="{Binding Deducciones, Converter={StaticResource Moneda}}" />
@@ -87,12 +104,13 @@
             </TabItem>
 
             <TabItem Header="Liquidación">
-                <DataGrid ItemsSource="{Binding Detalle}" Style="{StaticResource Tabla}" Margin="0,12,0,0">
+                <DataGrid ItemsSource="{Binding Detalle}" Style="{StaticResource Tabla}" Margin="0,12,0,0"
+                          HorizontalScrollBarVisibility="Auto" ColumnWidth="Auto">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Tipo doc." Binding="{Binding TipoDocumento}" />
                         <DataGridTextColumn Header="Número" Binding="{Binding NumeroDocumento}" />
-                        <DataGridTextColumn Header="Trabajador" Binding="{Binding Trabajador}" Width="*" />
-                        <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo}" Width="*" />
+                        <DataGridTextColumn Header="Trabajador" Binding="{Binding Trabajador}" MinWidth="160" />
+                        <DataGridTextColumn Header="Cargo" Binding="{Binding Cargo}" MinWidth="110" />
                         <DataGridTextColumn Header="Salario" Binding="{Binding SalarioBase, Converter={StaticResource Moneda}}" />
                         <DataGridTextColumn Header="Quincena" Binding="{Binding PagoQuincenal, Converter={StaticResource Moneda}}" />
                         <DataGridTextColumn Header="Salud 4 %" Binding="{Binding Salud, Converter={StaticResource Moneda}}" />
