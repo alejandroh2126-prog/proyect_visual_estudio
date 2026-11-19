@@ -78,7 +78,7 @@
                             <DataGridTextColumn Header="Socio o inversionista" Binding="{Binding Beneficiario}" Width="*" />
                             <DataGridTextColumn Header="Tipo" Binding="{Binding Categoria}" />
                             <DataGridTextColumn Header="Aporte" Binding="{Binding MontoAporte, Converter={StaticResource Moneda}}" />
-                            <DataGridTextColumn Header="%" Binding="{Binding Porcentaje, StringFormat='{0:0.##} %'}" />
+                            <DataGridTextColumn Header="%" Binding="{Binding PorcentajeTexto}" />
                             <DataGridTemplateColumn Header="A devolver">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>

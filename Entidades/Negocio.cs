@@ -342,6 +342,7 @@ namespace Entidades
         public DateTime? FechaLimite { get; set; }
 
         public bool EsPendiente { get { return Estado == EstadoPendiente; } }
+        public string PorcentajeTexto { get { return Porcentaje.ToString("0.##", System.Globalization.CultureInfo.GetCultureInfo("es-CO")) + " %"; } }
         public bool EstaVencida { get { return EsPendiente && FechaLimite.HasValue && FechaLimite.Value.Date < DateTime.Today; } }
         public string EstadoTexto { get { return EsPendiente ? "Pendiente" : "Pagada"; } }
     }
